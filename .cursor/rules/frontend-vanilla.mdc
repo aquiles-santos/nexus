@@ -1,0 +1,82 @@
+---
+description: "Vanilla HTML, CSS, and JavaScript patterns"
+globs: ["**/*.html", "**/*.js", "**/*.mjs", "**/*.css"]
+alwaysApply: false
+---
+
+# Frontend — Vanilla Web
+
+## Project Structure
+```
+features/<name>/   # co-located .js, .css, .test.js
+shared/api/        # shared fetch helpers
+shared/utils/
+assets/scripts/    # entry point (e.g. main.js)
+```
+
+## HTML
+- Semantic elements (`<nav>`, `<main>`, `<article>`, `<button>`, not `<div onclick>`)
+- Forms: associated `<label>`, appropriate `type`, `required`, `autocomplete`
+- ARIA only when native semantics are insufficient
+- Progressive enhancement: core functionality works without JavaScript
+
+## JavaScript — Modules & DOM
+- Entry point initializes features: `document.addEventListener('DOMContentLoaded', init)`
+- `init(root)` enriches existing DOM and returns a teardown function when listeners are attached
+- `create(...)` builds an element or API and returns `{ element, destroy }`
+- Select via `data-*` attributes, not classes meant for styling
+- Prefer event delegation on stable parent elements
+- Remove event listeners on teardown when dynamically mounting/unmounting
+- Batch DOM reads/writes; use `DocumentFragment` for multiple insertions
+- Never attach state to `window`; encapsulate in module closures
+
+### Conditional classes
+```javascript
+element.classList.toggle('is-active', isActive)
+```
+
+### Event handling
+```javascript
+container.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-action="submit"]')
+  if (!button) return
+  handleSubmit(event)
+})
+```
+
+## State Management (without frameworks)
+- Local state: variables within module closure
+- Cross-module communication: Custom Events (`new CustomEvent(...)`) or pub/sub module
+- Shareable UI state: URL search params or hash
+- Persist only non-sensitive data in `sessionStorage`; never store tokens in `localStorage`
+
+## Data Fetching
+- Use `fetch()` with explicit error handling (check `response.ok`)
+- `AbortController` for cancellable requests
+- Validate response shape before use; handle loading/error/empty states in UI
+- Client-side validation is UX only — always validate on server too
+- Never empty `catch` blocks; network failures must surface in UI state
+- Error messages linked via `aria-describedby`
+
+## Styling
+- CSS in co-located `.css` files (methodology pending — update when decided)
+- CSS custom properties for design tokens (`:root { --spacing-md: 1rem; }`)
+- Mobile-first media queries
+- Avoid inline styles except dynamically computed values
+
+## Accessibility
+- Keyboard navigable interactive elements (native `<button>`, `<a href>`)
+- Visible focus styles (`:focus-visible`)
+- Sufficient color contrast; don't rely on color alone
+- Announce dynamic changes with `aria-live` regions when needed
+- Error messages linked via `aria-describedby`
+
+## Testing
+- New features ship with a co-located `*.test.js`
+- Cover the happy path and at least one validation or network error case
+
+## Performance
+- Defer non-critical JS (`<script type="module" defer>`)
+- Lazy-load images (`loading="lazy"`)
+- Avoid layout thrashing (batch DOM operations)
+- No premature optimization; profile before optimizing

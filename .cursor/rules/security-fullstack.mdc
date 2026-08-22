@@ -1,0 +1,39 @@
+---
+description: "Security standards for frontend and backend — secrets, XSS, CSRF, auth, and dependencies"
+alwaysApply: true
+---
+
+# Security — Fullstack
+
+## Secrets & Config
+- Never commit `.env`, credentials, or tokens
+- Sensitive config via environment variables or server-side only
+
+## Input/Output
+- Server: validate with an explicit schema (allowlist fields and types); client validation is UX only
+- Never use `eval()`, `new Function()`, or dynamic code execution
+- Prefer `textContent` over `innerHTML`; sanitize with DOMPurify if `innerHTML` is required
+- Never log sensitive data, secrets, or session tokens in application logs
+- Links with `target="_blank"` require `rel="noopener noreferrer"`
+
+## Frontend
+- Session tokens in `httpOnly` `Secure` `SameSite` cookies — never `localStorage`
+- CSRF: classic forms include a hidden token validated server-side; `fetch` mutations use `SameSite` cookies plus a custom header (e.g. `X-Requested-With`) validated server-side
+- Content Security Policy via server headers or meta tag
+- Escape output in HTML context
+
+## Backend & Data
+- Parameterized queries / ORM only; no string concatenation for SQL
+- Least-privilege DB users; RBAC for sensitive operations
+- Use established auth solutions; do not roll custom crypto
+- Store passwords using strong, salted hashes (e.g., Argon2, bcrypt)
+
+## Dependencies & CI
+- No new dependencies without approval
+- Only use packages from verified sources
+- SCA, SAST, and secret scanning in CI pipeline
+- Integrate DAST in CD pipeline for deployed applications
+- Keep dependencies updated; document security decisions
+
+## Compliance
+- Controls in this file cover relevant OWASP Top 10 items for code review; NIST/ISO audit documentation is out of scope for day-to-day reviews

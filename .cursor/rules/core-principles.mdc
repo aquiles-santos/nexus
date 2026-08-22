@@ -1,0 +1,42 @@
+---
+description: "Core coding standards — philosophy, naming, workflow, and minimal diffs"
+alwaysApply: true
+---
+
+# Core Principles
+
+## Philosophy
+- SOLID, KISS, DRY — prefer simplicity and readability over premature optimization
+- Functional and declarative patterns; encapsulate state in modules, not globals
+- Minimal, focused diffs: change only what the task requires
+- Deliver complete implementations without placeholders in new code
+
+## Precedence
+When rules conflict: (1) explicit user instruction, (2) more specific glob rule, (3) this file.
+
+## Naming
+- Directories and files: kebab-case (`features/auth-wizard/`, `login-form.js`)
+- Functions: camelCase; event handlers prefixed with `handle` (`handleSubmit`)
+- Booleans: prefixed with `is`, `has`, `can` (`isLoading`, `hasError`)
+- Constants: UPPER_SNAKE_CASE for true constants (`const API_BASE_URL = ...`)
+- DOM hooks: `data-*` attributes for JS selectors (`data-login-form`, `data-action`)
+
+## Code Style
+- Early returns and guard clauses; happy path last
+- ES modules (`import`/`export`); one responsibility per file
+- Prefer `const`; use `let` only when reassignment is needed
+- Avoid `var`
+- Comment only non-obvious business logic; let names document intent
+- Module entrypoints: `export function initX(...)` or `export function createX(...)`; standalone callbacks may use `const`
+
+## Testing
+- New modules in `features/` ship with a co-located `*.test.js`; see `testing-standards.mdc`
+
+## Workflow
+- Complex tasks: brief plan, then implement
+- Clear tasks: implement directly
+- Do not ask for confirmation unless the user requested a plan or choice
+
+## Legacy Code
+- No TODOs in new code you deliver
+- Out-of-scope legacy bugs: document with TODO only when not part of current task
