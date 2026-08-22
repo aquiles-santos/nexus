@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexus — Demo</title>
+    <link rel="stylesheet" href="/assets/styles/tokens.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: var(--space-lg);
+        font-family: var(--font-family);
+        background: var(--color-bg-muted);
+      }
+
+      main {
+        max-width: 48rem;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: var(--font-size-lg);
+        margin-bottom: var(--space-md);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Nexus Editor</h1>
+      <nexus-editor></nexus-editor>
+    </main>
+    <script type="module">
+      import '/src/nexus-editor.js'
+    </script>
+  </body>
+</html>
