@@ -1,0 +1,24 @@
+---
+description: "Testing conventions for vanilla JS"
+globs: ["**/*.{test,spec}.js", "**/e2e/**"]
+alwaysApply: false
+---
+
+# Testing Standards
+
+## Stack
+- Unit/integration: Vitest + jsdom (or happy-dom)
+- E2E: Playwright
+- HTTP mocking: MSW (when fetch is involved)
+
+## Principles
+- Test user-visible behavior, not implementation details
+- Co-locate: `login-form.js` ↔ `login-form.test.js`
+- Name tests by behavior: `it('shows an error when email is empty')`
+- E2E for critical flows: auth, form submission, navigation
+- Use `getByRole` / `getByLabelText` in Playwright
+
+## Coverage Focus
+- Critical paths: auth, data mutations, form validation
+- Accessibility smoke: focusable elements, form labels
+- Do not test browser APIs or trivial utilities
