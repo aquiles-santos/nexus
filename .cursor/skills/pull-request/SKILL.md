@@ -85,20 +85,51 @@ Após `git status`, se há staged/unstaged/untracked:
 | **Atualize** — PR existe, branch não ahead do remoto | Parar. Mensagem [sem alterações — atualizar](examples.md#sem-alterações-atualizar-pr) |
 | **Atualize** — sem PR na branch | Parar. Orientar **"Crie a PR"** |
 
-Base branch: `main` ou `master` (detectar com `git symbolic-ref refs/remotes/origin/HEAD` ou default do repo via `gh repo view --json defaultBranchRef`).
+### 4. Base branch (obrigatória)
+
+`<base>` é a **branch de onde a feature branch foi criada**. A PR deve apontar para essa base — não para o default do repo nem para o upstream local.
+
+Definir `<head>` (branch da PR) e `<base>` **antes** de qualquer coleta git, body ou `gh pr create`.
+
+| Prioridade | Origem de `<base>` |
+|------------|-------------------|
+| 1 | Usuário solicitou explicitamente (ex.: "PR para `develop`") |
+| 2 | Branch de criação detectada no reflog (abaixo) |
+| 3 | Ambíguo ou indetectável → **perguntar** ao usuário |
+
+**Detecção** (`<head>` = branch atual da PR):
+
+```bash
+git reflog show <head> | grep 'branch: Created from' | tail -1
+```
+
+| Reflog | `<base>` |
+|--------|----------|
+| `branch: Created from <nome>` e `<nome>` ≠ `HEAD` | `<nome>` |
+| `branch: Created from HEAD` | commit `C` da linha; branch local cujo tip é `C`: `git branch --points-at C --format='%(refname:short)'` (excluir `<head>`) |
+| Tip movido desde a criação | entre branches locais `B` ≠ `<head>`, usar `B` em que `git merge-base B <head>` = `C`; empate → `main`, `develop`, `master`; ainda ambíguo → perguntar |
+
+**Validação:** `git log <base>..<head>` deve ter commits. Se vazio → parar e avisar.
+
+**Regras:**
+
+- **Sempre** passar `--base <base>` em `gh pr create` — nunca omitir nem deixar o `gh` inferir.
+- Usar o **mesmo** `<base>` em todo o fluxo: `git log <base>...<head>`, `git diff <base>...<head>`, validação e criação da PR.
+- Na resposta ao usuário, informar: `<base>` ← `<head>`.
 
 ## Crie a PR
 
 1. Ler este skill + [template.md](template.md)
-2. Preflight: `gh auth status`; `git status`; `git log <base>...HEAD`; `git diff <base>...HEAD`
-3. `gh` não autenticado → parar
-4. Sem commits à frente da base → parar (avisar uncommitted se houver)
-5. Uncommitted → avisar; body usa **só commits** (não incluir uncommitted)
-6. Preencher seções (chat + diff dos commits) — ver [Regras de preenchimento](#regras-de-preenchimento)
-7. Gravar `/tmp/nexus-pr-body.md`
-8. `git push -u origin HEAD` se necessário (`required_permissions: ["all"]` ou `network` + `git_write`)
-9. `gh pr create --title "..." --body-file /tmp/nexus-pr-body.md`
-10. **Retornar link da PR** na resposta (`gh pr view --json url -q .url` se create não imprimiu URL); repetir aviso de uncommitted se ainda existir
+2. Definir `<head>` (branch da PR) e `<base>` (branch de criação — ver [Base branch](#4-base-branch-obrigatória))
+3. Preflight: `gh auth status`; `git status`; `git log <base>...<head>`; `git diff <base>...<head>`
+4. `gh` não autenticado → parar
+5. Sem commits à frente de `<base>` em `<head>` → parar (avisar uncommitted se houver)
+6. Uncommitted → avisar; body usa **só commits** (não incluir uncommitted)
+7. Preencher seções (chat + diff dos commits) — ver [Regras de preenchimento](#regras-de-preenchimento)
+8. Gravar `/tmp/nexus-pr-body.md`
+9. `git push -u origin HEAD` se necessário (`required_permissions: ["all"]` ou `network` + `git_write`)
+10. `gh pr create --base <base> --title "..." --body-file /tmp/nexus-pr-body.md`
+11. **Retornar link da PR** na resposta (`gh pr view --json url -q .url` se create não imprimiu URL); incluir `<base>` ← `<head>`; repetir aviso de uncommitted se ainda existir
 
 Título: conciso, em português ou padrão do repo; reflete o escopo principal.
 
@@ -106,19 +137,20 @@ Título: conciso, em português ou padrão do repo; reflete o escopo principal.
 
 1. Preflight: `gh auth status`; `git status`
 2. `gh` não autenticado → parar
-3. `gh pr view --json body,url,title` (branch atual); sem PR → orientar **"Crie a PR"**; parar
-4. Branch não ahead do remoto (`git status -sb` / `git log origin/<branch>..HEAD`) → parar; nada a atualizar
-5. Uncommitted → avisar; body reflete só commits na branch
-6. Gerar body novo (seções exceto Evidências) em `/tmp/nexus-pr-body-new.md`
-7. Mesclar Evidências do body atual:
+3. `gh pr view --json body,url,title,baseRefName` (branch atual); sem PR → orientar **"Crie a PR"**; parar
+4. Usar `baseRefName` da PR existente como `<base>` para `git log <base>...HEAD` e `git diff <base>...HEAD`
+5. Branch não ahead do remoto (`git status -sb` / `git log origin/<branch>..HEAD`) → parar; nada a atualizar
+6. Uncommitted → avisar; body reflete só commits na branch
+7. Gerar body novo (seções exceto Evidências) em `/tmp/nexus-pr-body-new.md`
+8. Mesclar Evidências do body atual:
 
 ```bash
 cat /tmp/nexus-pr-body-new.md | bash .cursor/skills/pull-request/scripts/merge-evidencias.sh "$(gh pr view --json body -q .body)" > /tmp/nexus-pr-body.md
 ```
 
-8. Push se ahead; `gh pr edit --body-file /tmp/nexus-pr-body.md`
-9. Título: mudar só se escopo mudou claramente; **Evidências nunca muda**
-10. **Retornar link da PR** na resposta (`gh pr view --json url -q .url`); repetir aviso uncommitted se aplicável
+9. Push se ahead; `gh pr edit --body-file /tmp/nexus-pr-body.md`
+10. Título: mudar só se escopo mudou claramente; **Evidências nunca muda**
+11. **Retornar link da PR** na resposta (`gh pr view --json url -q .url`); incluir `<base>` ← branch atual; repetir aviso uncommitted se aplicável
 
 ## Regras de preenchimento
 
@@ -144,15 +176,17 @@ Seguir [template.md](template.md). Heurísticas para **Tipo da alteração** (`-
 
 ## Coleta git (paralelo quando possível)
 
+Definir `<head>` e `<base>` antes de coletar (ver [Base branch](#4-base-branch-obrigatória)).
+
 ```bash
 git status
-git branch --show-current
-git log <base>...HEAD --oneline
-git diff <base>...HEAD
+git branch --show-current   # → <head>
+git log <base>...<head> --oneline
+git diff <base>...<head>
 git status -sb
 ```
 
-Para update: `gh pr view --json body,url,title,number` e `git log origin/<branch>..HEAD --oneline`.
+Para update: `gh pr view --json body,url,title,number,baseRefName` e `git log origin/<branch>..HEAD --oneline`.
 
 ## Additional resources
 
