@@ -1,7 +1,7 @@
-import '/src/nexus-editor.js';
+import '/src/editor/nexus-editor.js';
 import { isSafeHref } from '/src/core/schema.js';
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
-import { createToolbarIcon } from '/src/ui/icons.js';
+import { createToolbarIcon } from '/src/ui/icons/icons.js';
 
 const SAMPLE_HTML = `
 <h1>The Architecture of Modern Content Systems</h1>

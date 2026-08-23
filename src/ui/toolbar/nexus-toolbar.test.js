@@ -83,6 +83,28 @@ describe('nexus-toolbar', () => {
     expect(showHandler.mock.calls[0][0].detail.label).toBe('Negrito')
   })
 
+  it('delays tooltip on hover', () => {
+    vi.useFakeTimers()
+
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+    toolbar.addButton({ command: 'bold', label: 'Negrito', type: 'toggle' })
+
+    const showHandler = vi.fn()
+    toolbar.addEventListener('nexus:toolbar-tooltip-show', showHandler)
+
+    const button = toolbar.shadowRoot.querySelector('[data-command="bold"]')
+    button.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, composed: true }))
+
+    expect(showHandler).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(400)
+    expect(showHandler).toHaveBeenCalled()
+    expect(showHandler.mock.calls[0][0].detail.label).toBe('Negrito')
+
+    vi.useRealTimers()
+  })
+
   it('adds a block style menu and fires formatBlock', () => {
     const toolbar = document.createElement('nexus-toolbar')
     document.body.appendChild(toolbar)
