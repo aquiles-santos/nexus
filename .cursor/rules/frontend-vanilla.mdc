@@ -30,6 +30,9 @@ assets/scripts/    # entry point (e.g. main.js)
 - Batch DOM reads/writes; use `DocumentFragment` for multiple insertions
 - Never attach state to `window`; encapsulate in module closures
 
+### JSDoc (selective)
+Use JSDoc for IDE support, not as runtime validation. Prefer `@typedef` for public contracts (`NexusPlugin`, bookmarks), `@type` on complex private state, and `@param`/`@returns` on public factories and APIs when types are not obvious. Skip redundant `@param {string} tag` on helpers whose names already document intent. Do not add `checkJs` or `eslint-plugin-jsdoc` without an explicit decision.
+
 ### Conditional classes
 ```javascript
 element.classList.toggle('is-active', isActive)
