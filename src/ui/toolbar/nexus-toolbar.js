@@ -1,7 +1,6 @@
 import { createToolbarIcon } from '../icons/icons.js';
 
 const TAG_NAME = 'nexus-toolbar';
-const TOOLTIP_SHOW_DELAY_MS = 400;
 
 class NexusToolbarElement extends HTMLElement {
   constructor() {
@@ -27,8 +26,6 @@ class NexusToolbarElement extends HTMLElement {
     this._openMenu = null;
     /** @type {((command: string, value?: string) => void) | null} */
     this._onCommand = null;
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    this._tooltipShowTimer = null;
   }
 
   connectedCallback() {
@@ -43,7 +40,6 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this._clearTooltipShowTimer();
     this._toolbar.removeEventListener('click', this._handleClick);
     this._toolbar.removeEventListener('mousedown', this._handleMouseDown);
     this._toolbar.removeEventListener('mouseover', this._handleMouseOver);
@@ -117,7 +113,7 @@ class NexusToolbarElement extends HTMLElement {
   _handleFocusIn = (event) => {
     const button = this._tooltipTargetFromEvent(event);
     if (button) {
-      this._emitTooltip(button, true, { immediate: true });
+      this._emitTooltip(button, true);
     }
   };
 
@@ -251,39 +247,12 @@ class NexusToolbarElement extends HTMLElement {
     return target?.closest?.('[aria-label]') ?? null;
   }
 
-  _clearTooltipShowTimer() {
-    if (this._tooltipShowTimer !== null) {
-      clearTimeout(this._tooltipShowTimer);
-      this._tooltipShowTimer = null;
-    }
-  }
-
-  _emitTooltip(button, isVisible, { immediate = false } = {}) {
-    if (!isVisible) {
-      this._clearTooltipShowTimer();
-      this._dispatchTooltipEvent(button, false);
-      return;
-    }
-
+  _emitTooltip(button, isVisible) {
     const label = button.getAttribute('aria-label');
     if (!label) {
       return;
     }
 
-    this._clearTooltipShowTimer();
-
-    if (immediate) {
-      this._dispatchTooltipEvent(button, true, label);
-      return;
-    }
-
-    this._tooltipShowTimer = setTimeout(() => {
-      this._tooltipShowTimer = null;
-      this._dispatchTooltipEvent(button, true, label);
-    }, TOOLTIP_SHOW_DELAY_MS);
-  }
-
-  _dispatchTooltipEvent(button, isVisible, label) {
     this.dispatchEvent(
       new CustomEvent(
         isVisible ? 'nexus:toolbar-tooltip-show' : 'nexus:toolbar-tooltip-hide',
