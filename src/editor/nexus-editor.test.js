@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createNexusEditor, TAG_NAME } from './nexus-editor.js'
-import { pluginBasicFormats } from './plugins/basic-formats/index.js'
+import { pluginBasicFormats } from '../plugins/basic-formats/index.js'
 
 describe('nexus-editor', () => {
   beforeEach(() => {

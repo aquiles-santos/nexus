@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createNexusEditor } from '../../nexus-editor.js'
+import { createNexusEditor } from '../../editor/nexus-editor.js'
 import { pluginBasicFormats } from './index.js'
 
 describe('plugin-basic-formats', () => {

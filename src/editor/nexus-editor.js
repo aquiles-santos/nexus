@@ -1,13 +1,13 @@
-import { filterHtml } from './core/schema.js';
-import { createSelectionManager } from './core/selection.js';
-import { createCommands } from './core/commands.js';
-import { createUndoManager } from './core/undo-manager.js';
-import { createEventBus } from './shared/event-bus.js';
-import { createPluginRegistry, getShortcutKey } from './shared/plugin-registry.js';
-import { createToolbarIcon } from './ui/icons.js';
-import './ui/nexus-toolbar.js';
-import './ui/nexus-tooltip.js';
-import './ui/nexus-modal.js';
+import { filterHtml } from '../core/schema.js';
+import { createSelectionManager } from '../core/selection.js';
+import { createCommands } from '../core/commands.js';
+import { createUndoManager } from '../core/undo-manager.js';
+import { createEventBus } from '../shared/event-bus.js';
+import { createPluginRegistry, getShortcutKey } from '../shared/plugin-registry.js';
+import { createToolbarIcon } from '../ui/icons/icons.js';
+import '../ui/toolbar/nexus-toolbar.js';
+import '../ui/tooltip/nexus-tooltip.js';
+import '../ui/modal/nexus-modal.js';
 
 const TAG_NAME = 'nexus-editor';
 const INITIAL_CONTENT = '<p><br></p>';
