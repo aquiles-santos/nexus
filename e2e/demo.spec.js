@@ -5,5 +5,5 @@ test('demo page loads and renders nexus-editor', async ({ page }) => {
 
   const editor = page.locator('nexus-editor')
   await expect(editor).toBeVisible()
-  await expect(editor).toHaveAttribute('role', 'textbox')
+  await expect(editor.locator('[data-nexus-content]')).toHaveAttribute('role', 'textbox')
 })
