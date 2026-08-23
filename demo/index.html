@@ -1,36 +1,73 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexus — Demo</title>
-    <link rel="stylesheet" href="/assets/styles/tokens.css" />
-    <style>
-      body {
-        margin: 0;
-        padding: var(--space-lg);
-        font-family: var(--font-family);
-        background: var(--color-bg-muted);
-      }
 
-      main {
-        max-width: 48rem;
-        margin: 0 auto;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- style-src 'unsafe-inline': tooltip and other UI set computed coordinates via element.style -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" />
+  <title>Nexus — Untitled Document</title>
+  <link rel="stylesheet" href="/assets/styles/tokens.css" />
+  <link rel="stylesheet" href="/demo/demo.css" />
+</head>
 
-      h1 {
-        font-size: var(--font-size-lg);
-        margin-bottom: var(--space-md);
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>Nexus Editor</h1>
-      <nexus-editor></nexus-editor>
-    </main>
-    <script type="module">
-      import '/src/nexus-editor.js'
-    </script>
-  </body>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <svg class="app-logo" viewBox="0 0 48 32" aria-hidden="true">
+        <rect width="48" height="32" rx="7" fill="var(--color-primary)" />
+        <g fill="none" stroke="#fff" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 23.5V8.5M11 8.5l8.5 15M19.5 8.5V23.5" />
+          <path d="M29 8.5l9 15M38 8.5l-9 15" />
+        </g>
+      </svg>
+      <span class="app-name">Nexus</span>
+      <span class="app-header__divider" aria-hidden="true"></span>
+      <span class="app-doc-title">Nexus — Demo</span>
+    </div>
+    <div class="app-header__actions">
+      <button type="button" class="btn btn--ghost" disabled>Share</button>
+      <button type="button" class="btn btn--primary" disabled>Publish</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <h1 class="visually-hidden">Nexus Editor</h1>
+    <nexus-editor id="editor">
+      <div data-nexus-source>
+        <div class="source-window">
+          <div class="source-window__bar">
+            <span class="source-window__dots" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            <span>index.html</span>
+          </div>
+          <label class="visually-hidden" for="source-html">Código HTML</label>
+          <textarea id="source-html" class="source-window__input" data-source-input spellcheck="false"></textarea>
+        </div>
+      </div>
+    </nexus-editor>
+  </main>
+
+  <footer class="app-status">
+    <div class="app-status__meta">
+      <span data-word-count>0 words</span>
+      <span data-char-count>0 characters</span>
+      <span class="app-status__saved">
+        <span class="app-status__dot" aria-hidden="true"></span>
+        <span data-save-status>Saved</span>
+      </span>
+    </div>
+    <div class="view-toggle" role="group" aria-label="Modo de visualização">
+      <button type="button" class="view-toggle__button" data-view="visual" aria-pressed="true">Visual</button>
+      <button type="button" class="view-toggle__button" data-view="source" aria-pressed="false">Code</button>
+    </div>
+  </footer>
+
+  <script type="module" src="/demo/demo.js"></script>
+</body>
+
 </html>
