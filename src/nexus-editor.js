@@ -1,33 +1,498 @@
+import { filterHtml } from './core/schema.js';
+import { createSelectionManager } from './core/selection.js';
+import { createCommands } from './core/commands.js';
+import { createUndoManager } from './core/undo-manager.js';
+import { createEventBus } from './shared/event-bus.js';
+import { createPluginRegistry, getShortcutKey } from './shared/plugin-registry.js';
+import { createToolbarIcon } from './ui/icons.js';
+import './ui/nexus-toolbar.js';
+import './ui/nexus-tooltip.js';
+import './ui/nexus-modal.js';
+
 const TAG_NAME = 'nexus-editor';
+const INITIAL_CONTENT = '<p><br></p>';
+const CONTENT_STYLES_ATTR = 'data-nexus-content-styles';
+
+function ensureContentStyles() {
+  if (document.head.querySelector(`link[${CONTENT_STYLES_ATTR}]`)) {
+    return;
+  }
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = new URL('./nexus-editor-content.css', import.meta.url).href;
+  link.setAttribute(CONTENT_STYLES_ATTR, '');
+  document.head.appendChild(link);
+}
 
 class NexusEditorElement extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = new URL('./nexus-editor.css', import.meta.url).href;
+    this.shadowRoot.appendChild(link);
+
+    this._chrome = document.createElement('div');
+    this._chrome.className = 'chrome';
+    this._chrome.part = 'chrome';
+    this.shadowRoot.appendChild(this._chrome);
+
+    this._toolbar = document.createElement('nexus-toolbar');
+    this._chrome.appendChild(this._toolbar);
+
+    this._canvas = document.createElement('div');
+    this._canvas.className = 'canvas';
+    this._canvas.part = 'canvas';
+    this._chrome.appendChild(this._canvas);
+
+    this._slot = document.createElement('slot');
+    this._slot.className = 'content-slot';
+    this._slot.part = 'content-slot';
+    this._canvas.appendChild(this._slot);
+
+    this._tooltip = document.createElement('nexus-tooltip');
+    this._chrome.appendChild(this._tooltip);
+
+    this._modal = document.createElement('nexus-modal');
+    this._chrome.appendChild(this._modal);
+
+    this._content = document.createElement('div');
+    this._content.setAttribute('data-nexus-content', '');
+    this._content.setAttribute('contenteditable', 'true');
+    this._content.setAttribute('role', 'textbox');
+    this._content.setAttribute('aria-multiline', 'true');
+    this._content.setAttribute('aria-label', 'Editor de texto');
+    this._content.part = 'content';
+
+    /** @type {ReturnType<typeof createSelectionManager> | null} */
+    this._selection = null;
+    /** @type {ReturnType<typeof createCommands> | null} */
+    this._commands = null;
+    /** @type {ReturnType<typeof createUndoManager> | null} */
+    this._undo = null;
+    /** @type {ReturnType<typeof createEventBus> | null} */
+    this._bus = null;
+    /** @type {ReturnType<typeof createPluginRegistry> | null} */
+    this._registry = null;
+    /** @type {import('./core/selection.js').NexusBookmark | null} */
+    this._toolbarBookmark = null;
+    this._isExecutingCommand = false;
+    this._initialized = false;
+    /** @type {import('./shared/plugin-registry.js').NexusPlugin[]} */
+    this._plugins = [];
+    /** @type {(() => void)[]} */
+    this._historyTeardowns = [];
+  }
+
   connectedCallback() {
-    if (this.hasAttribute('data-nexus-initialized')) {
+    if (this._initialized) {
+      return;
+    }
+    this._initialized = true;
+
+    if (!this.contains(this._content)) {
+      this.appendChild(this._content);
+    }
+    if (!this._content.hasChildNodes()) {
+      this._content.innerHTML = INITIAL_CONTENT;
+    }
+    this._checkEmpty();
+
+    this._selection = createSelectionManager(this._content);
+    this._commands = createCommands(this._content, this._selection);
+    this._undo = createUndoManager(this._content, () => this._selection.saveBookmark());
+    this._bus = createEventBus();
+    this._registry = createPluginRegistry(this, this._bus);
+
+    this._undo.reset();
+    this._addHistoryButtons();
+
+    this._toolbar.setCommandHandler((command, value) => {
+      this.execCommand(command, value, this._toolbarBookmark);
+      this._toolbarBookmark = null;
+    });
+
+    this._toolbar.addEventListener('nexus:toolbar-pointerdown', this._handleToolbarPointerDown);
+    this._toolbar.addEventListener('nexus:toolbar-tooltip-show', this._handleToolbarTooltipShow);
+    this._toolbar.addEventListener('nexus:toolbar-tooltip-hide', this._handleToolbarTooltipHide);
+
+    this._content.addEventListener('input', this._handleInput);
+    this._content.addEventListener('beforeinput', this._handleBeforeInput);
+    this._content.addEventListener('keydown', this._handleKeyDown);
+    this._content.addEventListener('mouseup', this._handleCaretMove);
+    this._content.addEventListener('keyup', this._handleCaretMove);
+    this._content.addEventListener('paste', this._handlePaste);
+    this._content.addEventListener('drop', this._handleDrop);
+    this._content.addEventListener('nexus:restore-bookmark', this._handleRestoreBookmark);
+    document.addEventListener('selectionchange', this._handleSelectionChange);
+
+    for (const plugin of this._plugins) {
+      this._registry.use(plugin);
+    }
+  }
+
+  disconnectedCallback() {
+    this._teardown();
+  }
+
+  _teardown() {
+    if (!this._initialized) {
       return;
     }
 
-    this.setAttribute('data-nexus-initialized', 'true');
-    this.setAttribute('role', 'textbox');
-    this.setAttribute('aria-multiline', 'true');
-    this.setAttribute('aria-label', 'Editor de texto');
+    this._content.removeEventListener('input', this._handleInput);
+    this._content.removeEventListener('beforeinput', this._handleBeforeInput);
+    this._content.removeEventListener('keydown', this._handleKeyDown);
+    this._content.removeEventListener('mouseup', this._handleCaretMove);
+    this._content.removeEventListener('keyup', this._handleCaretMove);
+    this._content.removeEventListener('paste', this._handlePaste);
+    this._content.removeEventListener('drop', this._handleDrop);
+    this._content.removeEventListener('nexus:restore-bookmark', this._handleRestoreBookmark);
+    document.removeEventListener('selectionchange', this._handleSelectionChange);
+    this._toolbar.removeEventListener('nexus:toolbar-pointerdown', this._handleToolbarPointerDown);
+    this._toolbar.removeEventListener('nexus:toolbar-tooltip-show', this._handleToolbarTooltipShow);
+    this._toolbar.removeEventListener('nexus:toolbar-tooltip-hide', this._handleToolbarTooltipHide);
+    this._registry?.destroy();
+    this._bus?.destroy();
+    this._undo?.destroy();
+    for (const teardown of this._historyTeardowns) {
+      teardown();
+    }
+    this._historyTeardowns = [];
+    this._registry = null;
+    this._bus = null;
+    this._initialized = false;
+  }
 
-    const placeholder = document.createElement('div');
-    placeholder.setAttribute('data-nexus-placeholder', '');
-    placeholder.textContent = 'Comece a escrever…';
-    this.appendChild(placeholder);
+  _addHistoryButtons() {
+    this._historyTeardowns = [
+      this._toolbar.addButton({
+        command: 'undo',
+        label: 'Desfazer',
+        icon: createToolbarIcon('undo'),
+      }),
+      this._toolbar.addButton({
+        command: 'redo',
+        label: 'Refazer',
+        icon: createToolbarIcon('redo'),
+      }),
+      this._toolbar.addButton({ command: 'undo', label: '', separator: true }),
+    ];
+    this._updateHistoryButtons();
+  }
+
+  _updateHistoryButtons() {
+    this._toolbar.setDisabled('undo', !this._undo?.canUndo());
+    this._toolbar.setDisabled('redo', !this._undo?.canRedo());
+  }
+
+  _handleToolbarPointerDown = () => {
+    this._toolbarBookmark = this._selection?.saveBookmark();
+  };
+
+  _handleToolbarTooltipShow = (event) => {
+    this._tooltip.show(event.detail.button, event.detail.label);
+  };
+
+  _handleToolbarTooltipHide = () => {
+    this._tooltip.hide();
+  };
+
+  _handleInput = () => {
+    this._checkEmpty();
+    this._undo?.recordInput();
+    this._updateToolbarState();
+  };
+
+  _handleBeforeInput = (event) => {
+    if (event.inputType !== 'insertText' && event.inputType !== 'insertCompositionText') {
+      return;
+    }
+
+    const pendingMarks = this._commands?.formatter.getPendingMarks();
+    if (!pendingMarks?.size) {
+      return;
+    }
+
+    event.preventDefault();
+    this._undo?.record();
+
+    const text = event.data ?? '';
+    const range = this._selection?.getRange();
+    if (!range) {
+      return;
+    }
+
+    range.deleteContents();
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+    this._commands.formatter.applyPendingMarks(textNode);
+
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    this._selection.setRange(range);
+
+    this._content.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+  };
+
+  _handleKeyDown = (event) => {
+    const key = getShortcutKey(event);
+    const shortcutCommand = this._registry?.getShortcuts().get(key);
+
+    if (shortcutCommand) {
+      event.preventDefault();
+      this.execCommand(shortcutCommand);
+      return;
+    }
+
+    if (key === 'Ctrl+Z' || key === 'Ctrl+Shift+Z') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        this._undo?.redo();
+      } else {
+        this._undo?.undo();
+      }
+      this._updateToolbarState();
+      this._updateHistoryButtons();
+      return;
+    }
+
+    if (key === 'Ctrl+Y') {
+      event.preventDefault();
+      this._undo?.redo();
+      this._updateToolbarState();
+      this._updateHistoryButtons();
+    }
+  };
+
+  _handlePaste = (event) => {
+    const html = event.clipboardData?.getData('text/html');
+    const text = event.clipboardData?.getData('text/plain');
+    if (!html && !text) {
+      return;
+    }
+
+    event.preventDefault();
+    this._insertSanitizedContent(html, text);
+  };
+
+  _handleDrop = (event) => {
+    const html = event.dataTransfer?.getData('text/html');
+    const text = event.dataTransfer?.getData('text/plain');
+    if (!html && !text) {
+      return;
+    }
+
+    event.preventDefault();
+    this._insertSanitizedContent(html, text);
+  };
+
+  _insertSanitizedContent(html, plainText) {
+    this._undo?.record();
+    const range = this._selection?.getRange();
+    if (!range) {
+      return;
+    }
+
+    range.deleteContents();
+
+    const sanitized = html ? filterHtml(html) : '';
+    if (sanitized) {
+      const template = document.createElement('template');
+      template.innerHTML = sanitized;
+      const lastNode = template.content.lastChild;
+      range.insertNode(template.content);
+      if (lastNode) {
+        range.setStartAfter(lastNode);
+        range.collapse(true);
+        this._selection.setRange(range);
+      }
+    } else if (plainText) {
+      const textNode = document.createTextNode(plainText);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      this._selection.setRange(range);
+    }
+
+    this._checkEmpty();
+    this._undo?.record();
+    this._updateToolbarState();
+  }
+
+  _handleRestoreBookmark = (event) => {
+    this._selection?.restoreBookmark(event.detail);
+  };
+
+  _handleCaretMove = () => {
+    this._commands?.formatter.clearPendingMarks();
+    this._updateToolbarState();
+  };
+
+  _handleSelectionChange = () => {
+    if (this._isExecutingCommand) {
+      return;
+    }
+
+    if (!this._content.contains(document.activeElement) && !this._content.contains(this._selection?.getRange()?.commonAncestorContainer ?? null)) {
+      return;
+    }
+    this._updateToolbarState();
+  };
+
+  _updateToolbarState() {
+    const formatter = this._commands?.formatter;
+    if (!formatter) {
+      return;
+    }
+
+    const activeBlock = formatter.getActiveBlockTag();
+    this._toolbar.updatePressed((command, value) => {
+      if (command === 'formatBlock') {
+        return Boolean(value) && value === activeBlock;
+      }
+      return formatter.isActive(command);
+    });
+    this._updateHistoryButtons();
+  }
+
+  _checkEmpty() {
+    const hasText = this._content.textContent.trim() !== '';
+    const hasMedia = Boolean(this._content.querySelector('img'));
+    this._content.toggleAttribute('data-empty', !hasText && !hasMedia);
+  }
+
+  /**
+   * @param {{ format?: 'html' }} [options]
+   * @returns {string}
+   */
+  getContent(options = {}) {
+    const { format = 'html' } = options;
+
+    if (format !== 'html') {
+      throw new Error(`Format "${format}" is not supported yet`);
+    }
+
+    return filterHtml(this._content.innerHTML);
+  }
+
+  setContent(html) {
+    this._undo?.record();
+    this._content.innerHTML = filterHtml(html) || INITIAL_CONTENT;
+    this._checkEmpty();
+    this._undo?.record();
+    this._updateToolbarState();
+  }
+
+  /**
+   * @param {string} name
+   * @param {unknown} [value]
+   * @param {import('./core/selection.js').NexusBookmark | null} [bookmark]
+   * @returns {boolean}
+   */
+  execCommand(name, value, bookmark = null) {
+    this._isExecutingCommand = true;
+
+    try {
+      if (bookmark) {
+        this._selection?.restoreBookmark(bookmark);
+      }
+
+      if (name === 'undo') {
+        this._undo?.undo();
+        this._updateToolbarState();
+        this._updateHistoryButtons();
+        return true;
+      }
+
+      if (name === 'redo') {
+        this._undo?.redo();
+        this._updateToolbarState();
+        this._updateHistoryButtons();
+        return true;
+      }
+
+      this._undo?.record();
+
+      const args = value === undefined ? [] : [value];
+      const pluginHandled = this._registry?.execCommand(name, ...args);
+      if (pluginHandled) {
+        this._undo?.record();
+        this._updateToolbarState();
+        return true;
+      }
+
+      const coreHandled = this._commands?.exec(name, ...args);
+      if (coreHandled) {
+        this._undo?.record();
+        this._updateToolbarState();
+        return true;
+      }
+
+      return false;
+    } finally {
+      this._isExecutingCommand = false;
+      if (!this._modal.dialog.open) {
+        this._content.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  /**
+   * @param {import('./shared/plugin-registry.js').NexusPlugin} plugin
+   */
+  use(plugin) {
+    if (this._plugins.includes(plugin)) {
+      return;
+    }
+
+    this._plugins.push(plugin);
+    this._registry?.use(plugin);
+  }
+
+  destroy() {
+    this._teardown();
+    this.remove();
+  }
+
+  get toolbar() {
+    return this._toolbar;
+  }
+
+  get modal() {
+    return this._modal;
+  }
+
+  get contentElement() {
+    return this._content;
+  }
+
+  get bus() {
+    return this._bus;
   }
 }
+
+ensureContentStyles();
 
 if (!customElements.get(TAG_NAME)) {
   customElements.define(TAG_NAME, NexusEditorElement);
 }
 
 /**
- * Creates and returns a nexus-editor element.
- * @returns {NexusEditorElement}
+ * Creates a nexus-editor element. Call `destroy()` to remove listeners and detach from the DOM.
+ * @returns {{ element: NexusEditorElement, destroy: () => void }}
  */
 export function createNexusEditor() {
-  return document.createElement(TAG_NAME);
+  const element = document.createElement(TAG_NAME);
+  return {
+    element,
+    destroy() {
+      element.destroy();
+    },
+  };
 }
 
 export { NexusEditorElement, TAG_NAME };
