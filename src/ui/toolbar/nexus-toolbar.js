@@ -1,4 +1,4 @@
-import { createToolbarIcon } from './icons.js';
+import { createToolbarIcon } from '../icons/icons.js';
 
 const TAG_NAME = 'nexus-toolbar';
 
@@ -14,7 +14,6 @@ class NexusToolbarElement extends HTMLElement {
 
     this._toolbar = document.createElement('div');
     this._toolbar.setAttribute('role', 'toolbar');
-    this._toolbar.setAttribute('aria-label', 'Formatação de texto');
     this._toolbar.className = 'toolbar';
     this._toolbar.part = 'toolbar';
     this.shadowRoot.appendChild(this._toolbar);
@@ -48,7 +47,10 @@ class NexusToolbarElement extends HTMLElement {
     this._toolbar.removeEventListener('focusin', this._handleFocusIn);
     this._toolbar.removeEventListener('focusout', this._handleFocusOut);
     this._toolbar.removeEventListener('keydown', this._handleKeyDown);
-    document.removeEventListener('pointerdown', this._handleDocumentPointerDown);
+    document.removeEventListener(
+      'pointerdown',
+      this._handleDocumentPointerDown,
+    );
   }
 
   _commandButtonFromEvent(event) {
@@ -57,7 +59,9 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   _handleClick = (event) => {
-    const trigger = /** @type {HTMLElement} */ (event.target).closest?.('[data-menu-trigger]');
+    const trigger = /** @type {HTMLElement} */ (event.target).closest?.(
+      '[data-menu-trigger]',
+    );
     if (trigger) {
       const menu = this._menus.find((entry) => entry.trigger === trigger);
       if (menu) {
@@ -84,10 +88,12 @@ class NexusToolbarElement extends HTMLElement {
     }
 
     event.preventDefault();
-    this.dispatchEvent(new CustomEvent('nexus:toolbar-pointerdown', {
-      bubbles: true,
-      composed: true,
-    }));
+    this.dispatchEvent(
+      new CustomEvent('nexus:toolbar-pointerdown', {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   };
 
   _handleMouseOver = (event) => {
@@ -155,7 +161,10 @@ class NexusToolbarElement extends HTMLElement {
       if (!isOpen) {
         this._toggleMenu(menu);
       }
-      const index = event.key === 'ArrowUp' ? menu.items.length - 1 : this._activeItemIndex(menu);
+      const index =
+        event.key === 'ArrowUp'
+          ? menu.items.length - 1
+          : this._activeItemIndex(menu);
       this._focusMenuItem(menu, index);
       return;
     }
@@ -186,18 +195,28 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   _handleMenuKeyDown(event, menu) {
-    const currentIndex = menu.items.indexOf(/** @type {HTMLButtonElement} */ (event.target.closest('[role="menuitemradio"]')));
+    const currentIndex = menu.items.indexOf(
+      /** @type {HTMLButtonElement} */ (
+        event.target.closest('[role="menuitemradio"]')
+      ),
+    );
     const lastIndex = menu.items.length - 1;
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      this._focusMenuItem(menu, currentIndex < lastIndex ? currentIndex + 1 : 0);
+      this._focusMenuItem(
+        menu,
+        currentIndex < lastIndex ? currentIndex + 1 : 0,
+      );
       return;
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
-      this._focusMenuItem(menu, currentIndex > 0 ? currentIndex - 1 : lastIndex);
+      this._focusMenuItem(
+        menu,
+        currentIndex > 0 ? currentIndex - 1 : lastIndex,
+      );
       return;
     }
 
@@ -234,11 +253,16 @@ class NexusToolbarElement extends HTMLElement {
       return;
     }
 
-    this.dispatchEvent(new CustomEvent(isVisible ? 'nexus:toolbar-tooltip-show' : 'nexus:toolbar-tooltip-hide', {
-      bubbles: true,
-      composed: true,
-      detail: { button, label },
-    }));
+    this.dispatchEvent(
+      new CustomEvent(
+        isVisible ? 'nexus:toolbar-tooltip-show' : 'nexus:toolbar-tooltip-hide',
+        {
+          bubbles: true,
+          composed: true,
+          detail: { button, label },
+        },
+      ),
+    );
   }
 
   _toggleMenu(menu) {
@@ -264,7 +288,9 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   _activeItemIndex(menu) {
-    const checked = menu.items.findIndex((item) => item.getAttribute('aria-checked') === 'true');
+    const checked = menu.items.findIndex(
+      (item) => item.getAttribute('aria-checked') === 'true',
+    );
     return checked === -1 ? 0 : checked;
   }
 
@@ -281,7 +307,16 @@ class NexusToolbarElement extends HTMLElement {
    * @param {{ command: string, label: string, text?: string, icon?: Node, type?: 'toggle' | 'button', value?: string, separator?: boolean, disabled?: boolean }} config
    * @returns {() => void}
    */
-  addButton({ command, label, text, icon, type = 'button', value, separator = false, disabled = false }) {
+  addButton({
+    command,
+    label,
+    text,
+    icon,
+    type = 'button',
+    value,
+    separator = false,
+    disabled = false,
+  }) {
     if (separator) {
       const sep = document.createElement('div');
       sep.className = 'toolbar__separator';
@@ -361,7 +396,6 @@ class NexusToolbarElement extends HTMLElement {
       item.setAttribute('role', 'menuitemradio');
       item.setAttribute('data-command', command);
       item.setAttribute('data-value', option.value);
-      item.setAttribute('aria-label', option.label);
       item.setAttribute('aria-checked', 'false');
       item.textContent = option.label;
       menu.appendChild(item);
@@ -419,7 +453,10 @@ class NexusToolbarElement extends HTMLElement {
     for (const button of this._toggleButtons) {
       const command = button.getAttribute('data-command');
       const value = button.getAttribute('data-value') ?? undefined;
-      button.setAttribute('aria-pressed', String(Boolean(isPressed(command, value))));
+      button.setAttribute(
+        'aria-pressed',
+        String(Boolean(isPressed(command, value))),
+      );
     }
 
     for (const menu of this._menus) {
@@ -442,18 +479,27 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   _findCommandButton(command, value) {
-    return [...this._toolbar.querySelectorAll('button[data-command]')].find((node) => {
-      if (!(node instanceof HTMLButtonElement) || node.getAttribute('data-command') !== command) {
-        return false;
-      }
-      if (node.closest('[role="menu"]')) {
-        return value !== undefined && node.getAttribute('data-value') === value;
-      }
-      if (value === undefined) {
-        return true;
-      }
-      return node.getAttribute('data-value') === value;
-    }) ?? null;
+    return (
+      [...this._toolbar.querySelectorAll('button[data-command]')].find(
+        (node) => {
+          if (
+            !(node instanceof HTMLButtonElement) ||
+            node.getAttribute('data-command') !== command
+          ) {
+            return false;
+          }
+          if (node.closest('[role="menu"]')) {
+            return (
+              value !== undefined && node.getAttribute('data-value') === value
+            );
+          }
+          if (value === undefined) {
+            return true;
+          }
+          return node.getAttribute('data-value') === value;
+        },
+      ) ?? null
+    );
   }
 
   _findToggleButton(command, value) {
