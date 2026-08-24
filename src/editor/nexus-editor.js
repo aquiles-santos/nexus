@@ -2,6 +2,7 @@ import { serializeAst } from '../data/ast-serializer.js';
 import { serializeHtml } from '../data/html-serializer.js';
 import { parseHtml } from '../data/html-parser.js';
 import { sanitizeHtml } from '../data/sanitizer.js';
+import { getActiveListType } from '../core/content-queries.js';
 import { createSelectionManager } from '../core/selection.js';
 import { createCommands } from '../core/commands.js';
 import { createUndoManager } from '../core/undo-manager.js';
@@ -438,9 +439,20 @@ class NexusEditorElement extends HTMLElement {
     }
 
     const activeBlock = formatter.getActiveBlockTag();
+    const range = this._selection?.getRange();
+    const activeListType = range
+      ? getActiveListType(this._content, this._selection)
+      : null;
+
     this._toolbar.updatePressed((command, value) => {
       if (command === 'formatBlock') {
         return Boolean(value) && value === activeBlock;
+      }
+      if (command === 'insertUnorderedList') {
+        return activeListType === 'ul';
+      }
+      if (command === 'insertOrderedList') {
+        return activeListType === 'ol';
       }
       return formatter.isActive(command);
     });
