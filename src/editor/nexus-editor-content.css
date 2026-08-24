@@ -26,9 +26,14 @@ nexus-editor [data-nexus-scroller] {
 }
 
 nexus-editor [data-nexus-content] {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
   max-width: 46rem;
+  min-width: 0;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-xl) var(--space-2xl);
+  flex: 1 0 auto;
   min-height: var(--nexus-content-min-height, 28rem);
   outline: none;
   border: 2px solid transparent;
@@ -43,6 +48,7 @@ nexus-editor [data-nexus-content]:focus-visible {
 
 nexus-editor [data-nexus-content][data-empty]::before {
   content: 'Comece a escrever…';
+  position: absolute;
   color: var(--color-text-muted);
   pointer-events: none;
 }

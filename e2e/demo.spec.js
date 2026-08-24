@@ -509,6 +509,28 @@ test('nests a numbered list inside a bullet list item', async ({ page }) => {
   await expect(content.locator('ol')).toHaveCount(1)
 })
 
+test('writing area fills the editor up to the max content width', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const metrics = await page.locator('nexus-editor').evaluate((editor) => {
+    const content = editor.querySelector('[data-nexus-content]')
+    const scroller = editor.querySelector('[data-nexus-scroller]')
+    const styles = getComputedStyle(scroller)
+    const padding =
+      Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight)
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+    return {
+      contentWidth: content.getBoundingClientRect().width,
+      expectedWidth: Math.min(46 * rem, scroller.clientWidth - padding),
+    }
+  })
+
+  expect(metrics.contentWidth).toBeGreaterThan(400)
+  expect(metrics.contentWidth).toBeCloseTo(metrics.expectedWidth, 1)
+})
+
 test('inserts an image from the file picker', async ({ page }) => {
   await page.goto('/demo/')
   await clearEditor(page)
@@ -524,8 +546,13 @@ test('inserts an image from the file picker', async ({ page }) => {
   await fileChooser.setFiles({
     name: 'photo.png',
     mimeType: 'image/png',
-    buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
   })
 
-  await expect(content.locator('img')).toHaveCount(1)
+  const image = content.locator('img')
+  await expect(image).toHaveCount(1)
+  await expect.poll(async () => image.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0)
 })
