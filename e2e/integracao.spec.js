@@ -32,6 +32,8 @@ test('integration demo mounts a configured editor', async ({ page }) => {
     '|',
     'insertLink',
     'insertImage',
+    '|',
+    'toggleSource',
   ])
 
   await expect(page.getByRole('button', { name: 'Negrito' })).toBeVisible()
