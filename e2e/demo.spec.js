@@ -303,3 +303,141 @@ test('host can set a custom editor height', async ({ page }) => {
   expect(metrics.css).toBe('320px')
   expect(metrics.offset).toBe(320)
 })
+
+test('creates a bullet list from the toolbar', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('First item')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+
+  await expect(content.locator('ul li')).toHaveText('First item')
+})
+
+test('removes bullet list formatting without deleting content', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Alpha')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Beta')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+
+  await expect(content.locator('ul')).toHaveCount(0)
+  await expect(content.locator('p')).toHaveCount(2)
+  await expect(content.locator('p').nth(0)).toHaveText('Alpha')
+  await expect(content.locator('p').nth(1)).toHaveText('Beta')
+})
+
+test('inline formatting on a list does not add empty items', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Item 1')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Item 2')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Item 3')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Sublinhado' }).click()
+
+  await expect(content.locator('ul > li')).toHaveCount(3)
+  await expect(content.locator('ul > li')).toHaveText(['Item 1', 'Item 2', 'Item 3'])
+  await expect(content.locator('li u')).toHaveCount(3)
+  await expect(content.locator('ul > u')).toHaveCount(0)
+})
+
+test('converts a bullet list to a numbered list without nesting', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Alpha')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Beta')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  await expect(content.locator('ol > li')).toHaveCount(2)
+  await expect(content.locator('ol > li')).toHaveText(['Alpha', 'Beta'])
+  await expect(content.locator('ul')).toHaveCount(0)
+  await expect(content.locator('ol')).toHaveCount(1)
+})
+
+test('removes a numbered list after conversion without leftover nodes', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Alpha')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Beta')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  await expect(content.locator('ul, ol, li')).toHaveCount(0)
+  await expect(content.locator('p')).toHaveCount(2)
+  await expect(content.locator('p').nth(0)).toHaveText('Alpha')
+  await expect(content.locator('p').nth(1)).toHaveText('Beta')
+})
+
+test('creates a numbered list with sequential items', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('First')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Second')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  const items = content.locator('ol > li')
+  await expect(items).toHaveCount(2)
+  await expect(items.nth(0)).toHaveText('First')
+  await expect(items.nth(1)).toHaveText('Second')
+  await expect(content.locator('ol')).toHaveCount(1)
+})
+
+test('nests a numbered list inside a bullet list item', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Item 1')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Subitem')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Item 2')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+
+  await content.locator('li').nth(1).click()
+  await page.keyboard.press('Tab')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  await expect(content.locator('ul > li > ol > li')).toHaveText('Subitem')
+  await expect(content.locator('ul > li')).toHaveCount(2)
+  await expect(content.locator('ol')).toHaveCount(1)
+})
