@@ -59,10 +59,30 @@ body {
   background: var(--color-border);
 }
 
-.app-doc-title {
-  display: none;
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.app-nav a {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.app-nav a[aria-current='page'] {
+  color: var(--color-text);
+}
+
+.app-nav a:hover {
+  color: var(--color-primary);
+}
+
+.app-nav a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .btn {
@@ -249,9 +269,5 @@ body {
   .app-header,
   .app-status {
     padding-inline: var(--space-lg);
-  }
-
-  .app-doc-title {
-    display: inline;
   }
 }
