@@ -201,4 +201,50 @@ describe('nexus-toolbar', () => {
     expect(toolbar.shadowRoot.querySelector('[role="menu"]').hidden).toBe(false)
     expect(toolbar.shadowRoot.activeElement).toBe(toolbar.shadowRoot.querySelector('[data-value="p"]'))
   })
+
+  it('mounts registered items in the configured order', () => {
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+
+    toolbar.registerItem('bold', { command: 'bold', label: 'Negrito', type: 'toggle' })
+    toolbar.registerItem('italic', { command: 'italic', label: 'Itálico', type: 'toggle' })
+    toolbar.applyLayout(['italic', '|', 'bold'])
+
+    const order = [...toolbar.shadowRoot.querySelectorAll('[data-toolbar-item]')].map(
+      (node) => node.getAttribute('data-toolbar-item'),
+    )
+
+    expect(order).toEqual(['italic', '|', 'bold'])
+  })
+
+  it('skips unknown tools until they are registered', () => {
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+
+    toolbar.registerItem('bold', { command: 'bold', label: 'Negrito', type: 'toggle' })
+    toolbar.applyLayout(['bold', 'italic'])
+
+    expect(toolbar.shadowRoot.querySelector('[data-command="italic"]')).toBeNull()
+    expect(toolbar.shadowRoot.querySelector('[data-command="bold"]')).not.toBeNull()
+
+    toolbar.registerItem('italic', { command: 'italic', label: 'Itálico', type: 'toggle' })
+
+    const order = [...toolbar.shadowRoot.querySelectorAll('[data-toolbar-item]')].map(
+      (node) => node.getAttribute('data-toolbar-item'),
+    )
+    expect(order).toEqual(['bold', 'italic'])
+  })
+
+  it('warns and no-ops when registerItem is called without an id', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+
+    const teardown = toolbar.registerItem('', { command: 'bold', label: 'Negrito' })
+
+    expect(warn).toHaveBeenCalled()
+    expect(toolbar.shadowRoot.querySelector('[data-command]')).toBeNull()
+    expect(() => teardown()).not.toThrow()
+    warn.mockRestore()
+  })
 })

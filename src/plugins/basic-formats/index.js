@@ -22,7 +22,7 @@ export const pluginBasicFormats = {
   init(editor) {
     clearTeardowns(editor);
     teardownsByEditor.set(editor, [
-      editor.toolbar.addMenu({
+      editor.toolbar.registerItem('formatBlock', {
         command: 'formatBlock',
         label: 'Estilo do bloco',
         options: [
@@ -33,10 +33,24 @@ export const pluginBasicFormats = {
           { value: 'blockquote', label: 'Citação' },
         ],
       }),
-      editor.toolbar.addButton({ command: 'formatBlock', label: '', separator: true }),
-      editor.toolbar.addButton({ command: 'bold', label: 'Negrito', text: 'B', type: 'toggle' }),
-      editor.toolbar.addButton({ command: 'italic', label: 'Itálico', text: 'I', type: 'toggle' }),
-      editor.toolbar.addButton({ command: 'underline', label: 'Sublinhado', text: 'U', type: 'toggle' }),
+      editor.toolbar.registerItem('bold', {
+        command: 'bold',
+        label: 'Negrito',
+        text: 'B',
+        type: 'toggle',
+      }),
+      editor.toolbar.registerItem('italic', {
+        command: 'italic',
+        label: 'Itálico',
+        text: 'I',
+        type: 'toggle',
+      }),
+      editor.toolbar.registerItem('underline', {
+        command: 'underline',
+        label: 'Sublinhado',
+        text: 'U',
+        type: 'toggle',
+      }),
     ]);
   },
 

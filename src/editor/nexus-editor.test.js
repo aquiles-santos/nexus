@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createNexusEditor, TAG_NAME } from './nexus-editor.js'
+import { createNexusEditor, TAG_NAME, DEFAULT_EDITOR_HEIGHT, DEFAULT_TOOLBAR } from './nexus-editor.js'
 import { pluginBasicFormats } from '../plugins/basic-formats/index.js'
 
 describe('nexus-editor', () => {
@@ -25,6 +25,114 @@ describe('nexus-editor', () => {
     expect(element).toBeInstanceOf(HTMLElement)
     expect(element.tagName).toBe('NEXUS-EDITOR')
     expect(typeof destroy).toBe('function')
+  })
+
+  it('applies default height and toolbar when no config is provided', () => {
+    const editor = mountEditor()
+
+    expect(editor.config.height).toBe(DEFAULT_EDITOR_HEIGHT)
+    expect(editor.config.toolbar).toEqual(DEFAULT_TOOLBAR)
+    expect(editor.style.getPropertyValue('--nexus-editor-height')).toBe(DEFAULT_EDITOR_HEIGHT)
+  })
+
+  it('renders the default toolbar tools in the default order', () => {
+    const editor = mountEditor()
+    editor.use(pluginBasicFormats)
+
+    const order = [...editor.toolbar.shadowRoot.querySelectorAll('[data-toolbar-item]')].map(
+      (node) => node.getAttribute('data-toolbar-item'),
+    )
+
+    expect(order).toEqual(DEFAULT_TOOLBAR)
+  })
+
+  it('applies a custom height from createNexusEditor', () => {
+    const { element: editor } = createNexusEditor({ height: 400 })
+    document.body.appendChild(editor)
+
+    expect(editor.config.height).toBe('400px')
+    expect(editor.style.getPropertyValue('--nexus-editor-height')).toBe('400px')
+    expect(editor.style.height).toBe('400px')
+    expect(editor.style.flexGrow).toBe('0')
+    expect(editor.style.getPropertyValue('--nexus-content-min-height')).toBe('0px')
+  })
+
+  it('forwards aria-labelledby from the host to the textbox', () => {
+    const caption = document.createElement('span')
+    caption.id = 'body-label'
+    caption.textContent = 'Conteúdo'
+    document.body.appendChild(caption)
+
+    const { element: editor } = createNexusEditor()
+    editor.setAttribute('aria-labelledby', 'body-label')
+    document.body.appendChild(editor)
+
+    expect(editor.contentElement.getAttribute('aria-labelledby')).toBe('body-label')
+    expect(editor.contentElement.hasAttribute('aria-label')).toBe(false)
+  })
+
+  it('renders toolbar tools in the configured order and omits the rest', () => {
+    const { element: editor } = createNexusEditor({
+      toolbar: ['underline', 'bold'],
+    })
+    document.body.appendChild(editor)
+    editor.use(pluginBasicFormats)
+
+    const order = [...editor.toolbar.shadowRoot.querySelectorAll('[data-toolbar-item]')].map(
+      (node) => node.getAttribute('data-toolbar-item'),
+    )
+
+    expect(order).toEqual(['underline', 'bold'])
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="undo"]')).toBeNull()
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="italic"]')).toBeNull()
+  })
+
+  it('renders no toolbar tools when an empty toolbar is configured', () => {
+    const { element: editor } = createNexusEditor({ toolbar: [] })
+    document.body.appendChild(editor)
+    editor.use(pluginBasicFormats)
+
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command]')).toBeNull()
+  })
+
+  it('keeps format shortcuts when the tool is omitted from the toolbar', () => {
+    const { element: editor } = createNexusEditor({ toolbar: ['italic'] })
+    document.body.appendChild(editor)
+    editor.use(pluginBasicFormats)
+
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="bold"]')).toBeNull()
+
+    editor.contentElement.innerHTML = '<p>Test content</p>'
+    const textNode = editor.contentElement.querySelector('p').firstChild
+    const range = document.createRange()
+    range.setStart(textNode, 0)
+    range.setEnd(textNode, 4)
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(range)
+
+    editor.contentElement.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'b', ctrlKey: true, bubbles: true }),
+    )
+
+    expect(editor.getContent({ format: 'html' })).toBe('<p><strong>Test</strong> content</p>')
+  })
+
+  it('updates height and toolbar when configure is called after mount', () => {
+    const editor = mountEditor()
+    editor.use(pluginBasicFormats)
+
+    editor.configure({
+      height: '50vh',
+      toolbar: ['italic', '|', 'undo'],
+    })
+
+    expect(editor.config.height).toBe('50vh')
+    expect(editor.style.getPropertyValue('--nexus-editor-height')).toBe('50vh')
+    expect(
+      [...editor.toolbar.shadowRoot.querySelectorAll('[data-toolbar-item]')].map((node) =>
+        node.getAttribute('data-toolbar-item'),
+      ),
+    ).toEqual(['italic', '|', 'undo'])
   })
 
   it('renders contenteditable area with textbox role', () => {
@@ -148,6 +256,20 @@ describe('nexus-editor', () => {
     document.body.appendChild(editor)
 
     expect(editor.toolbar.shadowRoot.querySelectorAll('[data-command="undo"]')).toHaveLength(1)
+  })
+
+  it('wraps content and existing light DOM children in a scroller', () => {
+    const editor = document.createElement(TAG_NAME)
+    const source = document.createElement('div')
+    source.setAttribute('data-nexus-source', '')
+    editor.appendChild(source)
+    document.body.appendChild(editor)
+
+    const scroller = editor.querySelector('[data-nexus-scroller]')
+    expect(scroller).not.toBeNull()
+    expect(scroller.contains(editor.contentElement)).toBe(true)
+    expect(scroller.contains(source)).toBe(true)
+    expect(editor.scrollerElement).toBe(scroller)
   })
 
   it('falls back to plain text when pasted html sanitizes to empty', () => {
