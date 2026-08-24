@@ -2,7 +2,7 @@ import { serializeAst } from '../data/ast-serializer.js';
 import { serializeHtml } from '../data/html-serializer.js';
 import { parseHtml } from '../data/html-parser.js';
 import { sanitizeHtml } from '../data/sanitizer.js';
-import { getActiveListType } from '../core/content-queries.js';
+import { getActiveListType, findAncestorAnchor } from '../core/content-queries.js';
 import { createSelectionManager } from '../core/selection.js';
 import { createCommands } from '../core/commands.js';
 import { createUndoManager } from '../core/undo-manager.js';
@@ -443,6 +443,9 @@ class NexusEditorElement extends HTMLElement {
     const activeListType = range
       ? getActiveListType(this._content, this._selection)
       : null;
+    const isInsideLink = range
+      ? Boolean(findAncestorAnchor(this._content, range.startContainer))
+      : false;
 
     this._toolbar.updatePressed((command, value) => {
       if (command === 'formatBlock') {
@@ -453,6 +456,9 @@ class NexusEditorElement extends HTMLElement {
       }
       if (command === 'insertOrderedList') {
         return activeListType === 'ol';
+      }
+      if (command === 'insertLink') {
+        return isInsideLink;
       }
       return formatter.isActive(command);
     });
