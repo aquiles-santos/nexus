@@ -66,7 +66,7 @@ export const editorConfig = {
 | `bold`, `italic`, `underline` | plugin `basic-formats` | |
 | `insertUnorderedList`, `insertOrderedList` | plugin `lists` | Tab / Shift+Tab dentro de listas |
 | `insertLink` | plugin `link` | Atalho `Ctrl+K`; valida href seguro |
-| `insertImage` | plugin da página hospedeira | Na demo ainda está desabilitado |
+| `insertImage` | plugin `media` | Upload local via `StorageAdapter` |
 | `toggleSource` | plugin da página hospedeira | Alterna visual / código |
 
 ---
@@ -102,6 +102,7 @@ import { createNexusEditor } from '/src/editor/nexus-editor.js'
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js'
 import { pluginLists } from '/src/plugins/lists/index.js'
 import { pluginLink } from '/src/plugins/link/index.js'
+import { pluginMedia } from '/src/plugins/media/index.js'
 import { editorConfig } from './nexus-config.js'
 
 function initEditor(root) {
@@ -116,6 +117,7 @@ function initEditor(root) {
   editor.use(pluginBasicFormats)
   editor.use(pluginLists)
   editor.use(pluginLink)
+  editor.use(pluginMedia)
   editor.setContent('<p>Comece a escrever…</p>')
   mount.appendChild(editor)
 
@@ -147,6 +149,7 @@ import '/src/editor/nexus-editor.js'
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js'
 import { pluginLists } from '/src/plugins/lists/index.js'
 import { pluginLink } from '/src/plugins/link/index.js'
+import { pluginMedia } from '/src/plugins/media/index.js'
 import { editorConfig } from './nexus-config.js'
 
 function initEditor(root) {
@@ -159,6 +162,7 @@ function initEditor(root) {
   editor.use(pluginBasicFormats)
   editor.use(pluginLists)
   editor.use(pluginLink)
+  editor.use(pluginMedia)
   editor.setContent('<p>Comece a escrever…</p>')
 
   return () => editor.destroy()

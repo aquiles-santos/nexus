@@ -3,6 +3,7 @@ import { DEFAULT_TOOLBAR } from '/src/editor/editor-config.js';
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
 import { pluginLists } from '/src/plugins/lists/index.js';
 import { pluginLink } from '/src/plugins/link/index.js';
+import { pluginMedia } from '/src/plugins/media/index.js';
 import { createToolbarIcon } from '/src/ui/icons/icons.js';
 
 const SAMPLE_HTML = `
@@ -51,12 +52,6 @@ export function initDemo(root) {
     name: 'host-chrome',
     init(instance) {
       chromeTeardowns.push(
-        instance.toolbar.registerItem('insertImage', {
-          command: 'insertImage',
-          label: 'Imagem (em breve)',
-          icon: () => createToolbarIcon('image'),
-          disabled: true,
-        }),
         instance.toolbar.registerItem('toggleSource', {
           command: 'toggleSource',
           label: 'Código',
@@ -96,6 +91,7 @@ export function initDemo(root) {
   editor.use(pluginBasicFormats);
   editor.use(pluginLists);
   editor.use(pluginLink);
+  editor.use(pluginMedia);
   editor.use(chromePlugin);
   editor.setContent(SAMPLE_HTML);
   updateCounts();
