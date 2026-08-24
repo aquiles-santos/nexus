@@ -187,4 +187,49 @@ describe('formatter', () => {
     expect(root.querySelector('script')).toBeNull()
     expect(root.innerHTML).toBe('<p>Hello world</p>')
   })
+
+  it('wraps list item text without inserting empty items', () => {
+    root.innerHTML = '<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>'
+    const selection = createSelectionManager(root)
+    const formatter = createFormatter(root, selection)
+    const items = root.querySelectorAll('li')
+
+    const range = document.createRange()
+    range.setStart(items[0], 0)
+    range.setEnd(items[2], items[2].childNodes.length)
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(range)
+
+    formatter.toggleInline('u')
+
+    expect(root.querySelectorAll('ul > li')).toHaveLength(3)
+    expect(root.querySelector('ul > u')).toBeNull()
+    expect([...root.querySelectorAll('li')].map((item) => item.textContent)).toEqual([
+      'Item 1',
+      'Item 2',
+      'Item 3',
+    ])
+    expect(root.innerHTML).toBe(
+      '<ul><li><u>Item 1</u></li><li><u>Item 2</u></li><li><u>Item 3</u></li></ul>',
+    )
+  })
+
+  it('does not wrap list items inside an inline tag', () => {
+    root.innerHTML = '<ul><li>Item 1</li><li>Item 2</li></ul>'
+    const selection = createSelectionManager(root)
+    const formatter = createFormatter(root, selection)
+
+    const range = document.createRange()
+    range.selectNodeContents(root.querySelector('ul'))
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(range)
+
+    formatter.toggleInline('strong')
+
+    expect(root.querySelector('ul > strong')).toBeNull()
+    expect(root.querySelectorAll('ul > li')).toHaveLength(2)
+    expect(root.innerHTML).toBe(
+      '<ul><li><strong>Item 1</strong></li><li><strong>Item 2</strong></li></ul>',
+    )
+  })
 })
