@@ -83,4 +83,19 @@ describe('schema', () => {
     expect(isSafeHref('//evil.example')).toBe(false)
     expect(isSafeHref('')).toBe(false)
   })
+
+  it('unwraps a list nested directly inside another list', () => {
+    const result = filterHtml('<ul><ol><li>Alpha</li></ol></ul>')
+    expect(result).toBe('<ul><li>Alpha</li></ul>')
+  })
+
+  it('removes empty leftover list nodes', () => {
+    const result = filterHtml('<ul><ol></ol><li>Alpha</li></ul>')
+    expect(result).toBe('<ul><li>Alpha</li></ul>')
+  })
+
+  it('keeps a nested list that lives inside a list item', () => {
+    const result = filterHtml('<ul><li>Alpha<ol><li>Nested</li></ol></li></ul>')
+    expect(result).toBe('<ul><li>Alpha<ol><li>Nested</li></ol></li></ul>')
+  })
 })
