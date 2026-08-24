@@ -289,6 +289,13 @@ test('focus border stays inside the scroller when content overflows', async ({ p
   expect(edgesVisibleAtBottom).toBe(true)
 })
 
+test('shows overflow menu on narrow toolbar width', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await page.goto('/demo/')
+
+  await expect(page.getByRole('button', { name: 'Mais ferramentas' })).toBeVisible()
+})
+
 test('demo toolbar follows the configured tool order', async ({ page }) => {
   await page.goto('/demo/')
 
