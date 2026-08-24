@@ -1,0 +1,188 @@
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background: var(--color-bg-canvas);
+  line-height: var(--font-line-height);
+}
+
+.host-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: 0.7rem var(--space-md);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.host-header__brand,
+.host-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.host-name {
+  font-weight: 700;
+  font-size: var(--font-size-md);
+}
+
+.host-header__divider {
+  width: 1px;
+  height: 1.1rem;
+  background: var(--color-border);
+}
+
+.host-nav {
+  gap: var(--space-md);
+}
+
+.host-nav a {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.host-nav a[aria-current='page'] {
+  color: var(--color-text);
+}
+
+.host-nav a:hover {
+  color: var(--color-primary);
+}
+
+.host-nav a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.host-main {
+  padding: var(--space-lg) var(--space-md) var(--space-2xl);
+}
+
+.host-article {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.host-article h1 {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-h2);
+  line-height: 1.3;
+}
+
+.host-lead {
+  margin: 0 0 var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.host-lead code,
+.host-config dd,
+.host-config kbd {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.host-form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.host-field {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.host-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.host-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+}
+
+.host-input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.host-article nexus-editor {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: clip;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.host-config {
+  margin-top: var(--space-xl);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.host-config h2 {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.host-config dl {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-md);
+}
+
+.host-config div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.host-config dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.host-config dd {
+  margin: 0;
+}
+
+.host-config p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.host-config kbd {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+}
+
+@media (min-width: 40rem) {
+  .host-header,
+  .host-main {
+    padding-inline: var(--space-lg);
+  }
+}
