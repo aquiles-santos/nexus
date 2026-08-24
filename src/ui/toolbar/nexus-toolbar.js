@@ -1,6 +1,24 @@
 import { createToolbarIcon } from '../icons/icons.js';
+import {
+  TOOLBAR_SEPARATOR,
+  resolveToolbarLayout,
+} from '../../shared/toolbar-layout.js';
 
 const TAG_NAME = 'nexus-toolbar';
+
+/**
+ * @typedef {{ command: string, label: string, text?: string, icon?: Node | (() => Node), type?: 'toggle' | 'button', value?: string, disabled?: boolean, options?: { value: string, label: string }[] }} NexusToolbarItem
+ */
+
+function resolveToolbarIcon(icon) {
+  if (typeof icon === 'function') {
+    return icon();
+  }
+  if (icon instanceof Node) {
+    return icon.cloneNode(true);
+  }
+  return undefined;
+}
 
 class NexusToolbarElement extends HTMLElement {
   constructor() {
@@ -14,6 +32,7 @@ class NexusToolbarElement extends HTMLElement {
 
     this._toolbar = document.createElement('div');
     this._toolbar.setAttribute('role', 'toolbar');
+    this._toolbar.setAttribute('aria-label', 'Formatação de texto');
     this._toolbar.className = 'toolbar';
     this._toolbar.part = 'toolbar';
     this.shadowRoot.appendChild(this._toolbar);
@@ -26,6 +45,12 @@ class NexusToolbarElement extends HTMLElement {
     this._openMenu = null;
     /** @type {((command: string, value?: string) => void) | null} */
     this._onCommand = null;
+    /** @type {Map<string, NexusToolbarItem>} */
+    this._catalog = new Map();
+    /** @type {string[] | null} */
+    this._requestedLayout = null;
+    /** @type {(() => void)[]} */
+    this._mountedTeardowns = [];
   }
 
   connectedCallback() {
@@ -304,7 +329,95 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   /**
-   * @param {{ command: string, label: string, text?: string, icon?: Node, type?: 'toggle' | 'button', value?: string, separator?: boolean, disabled?: boolean }} config
+   * @param {string} id
+   * @param {NexusToolbarItem} definition
+   * @returns {() => void}
+   */
+  registerItem(id, definition) {
+    if (!id) {
+      console.warn('nexus-toolbar: registerItem requires a non-empty id');
+      return () => {};
+    }
+
+    this._catalog.set(id, definition);
+    this._remountIfApplied();
+
+    return () => {
+      this._catalog.delete(id);
+      this._remountIfApplied();
+    };
+  }
+
+  /**
+   * @param {string[]} itemIds
+   */
+  applyLayout(itemIds) {
+    this._requestedLayout = Array.isArray(itemIds) ? [...itemIds] : [];
+    this._mountRequested();
+  }
+
+  getRegisteredIds() {
+    return new Set(this._catalog.keys());
+  }
+
+  _remountIfApplied() {
+    if (this._requestedLayout) {
+      this._mountRequested();
+    }
+  }
+
+  _mountRequested() {
+    this._closeMenu();
+    for (const teardown of this._mountedTeardowns) {
+      teardown();
+    }
+    this._mountedTeardowns = [];
+
+    const visible = resolveToolbarLayout(
+      this._requestedLayout ?? [],
+      this.getRegisteredIds(),
+    );
+
+    for (const id of visible) {
+      if (id === TOOLBAR_SEPARATOR) {
+        this._mountedTeardowns.push(
+          this.addButton({
+            command: '',
+            label: '',
+            separator: true,
+            id,
+          }),
+        );
+        continue;
+      }
+
+      const definition = this._catalog.get(id);
+      if (!definition) {
+        continue;
+      }
+      this._mountedTeardowns.push(this._mountDefinition(id, definition));
+    }
+  }
+
+  /**
+   * @param {string} id
+   * @param {NexusToolbarItem} definition
+   * @returns {() => void}
+   */
+  _mountDefinition(id, definition) {
+    if (Array.isArray(definition.options)) {
+      return this.addMenu({ ...definition, id });
+    }
+
+    return this.addButton({
+      ...definition,
+      id,
+      icon: resolveToolbarIcon(definition.icon),
+    });
+  }
+
+  /**
+   * @param {{ command: string, label: string, text?: string, icon?: Node | (() => Node), type?: 'toggle' | 'button', value?: string, separator?: boolean, disabled?: boolean, id?: string }} config
    * @returns {() => void}
    */
   addButton({
@@ -316,12 +429,16 @@ class NexusToolbarElement extends HTMLElement {
     value,
     separator = false,
     disabled = false,
+    id,
   }) {
     if (separator) {
       const sep = document.createElement('div');
       sep.className = 'toolbar__separator';
       sep.setAttribute('role', 'separator');
       sep.setAttribute('aria-orientation', 'vertical');
+      if (id) {
+        sep.setAttribute('data-toolbar-item', id);
+      }
       this._toolbar.appendChild(sep);
       return () => sep.remove();
     }
@@ -333,9 +450,13 @@ class NexusToolbarElement extends HTMLElement {
     button.setAttribute('data-command', command);
     button.setAttribute('aria-label', label);
     button.disabled = disabled;
+    if (id) {
+      button.setAttribute('data-toolbar-item', id);
+    }
 
-    if (icon instanceof Node) {
-      button.appendChild(icon);
+    const resolvedIcon = resolveToolbarIcon(icon);
+    if (resolvedIcon instanceof Node) {
+      button.appendChild(resolvedIcon);
     } else {
       button.textContent = text ?? label;
     }
@@ -361,12 +482,15 @@ class NexusToolbarElement extends HTMLElement {
   }
 
   /**
-   * @param {{ command: string, label: string, options: { value: string, label: string }[] }} config
+   * @param {{ command: string, label: string, options: { value: string, label: string }[], id?: string }} config
    * @returns {() => void}
    */
-  addMenu({ command, label, options }) {
+  addMenu({ command, label, options, id }) {
     const wrap = document.createElement('div');
     wrap.className = 'toolbar__menu-wrap';
+    if (id) {
+      wrap.setAttribute('data-toolbar-item', id);
+    }
 
     const trigger = document.createElement('button');
     trigger.type = 'button';
