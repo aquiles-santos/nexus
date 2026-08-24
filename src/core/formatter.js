@@ -131,20 +131,163 @@ export function createFormatter(root, selection) {
     parent.removeChild(element);
   }
 
-  function wrapRangeWithTag(range, tag) {
-    const wrapper = document.createElement(tag);
+  function rangeIntersectsNode(range, node) {
+    if (typeof range.intersectsNode === 'function') {
+      try {
+        return range.intersectsNode(node);
+      } catch {
+        return false;
+      }
+    }
 
+    const nodeRange = document.createRange();
     try {
-      range.surroundContents(wrapper);
+      if (node.nodeType === Node.TEXT_NODE) {
+        nodeRange.selectNodeContents(node);
+      } else {
+        nodeRange.selectNode(node);
+      }
     } catch {
-      const contents = range.extractContents();
-      wrapper.appendChild(contents);
-      range.insertNode(wrapper);
+      return false;
+    }
+
+    return (
+      range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0
+      && nodeRange.compareBoundaryPoints(Range.START_TO_END, range) < 0
+    );
+  }
+
+  function rangeContainsBlock(range) {
+    const ancestor = range.commonAncestorContainer;
+    if (ancestor.nodeType === Node.TEXT_NODE) {
+      return false;
+    }
+
+    if (ancestor.nodeType === Node.ELEMENT_NODE) {
+      const ancestorTag = ancestor.tagName.toLowerCase();
+      if (ancestorTag === 'ul' || ancestorTag === 'ol') {
+        return true;
+      }
+    }
+
+    const walker = document.createTreeWalker(ancestor, NodeFilter.SHOW_ELEMENT);
+    let node = walker.nextNode();
+
+    while (node) {
+      if (
+        node.nodeType === Node.ELEMENT_NODE
+        && isBlock(node.tagName.toLowerCase())
+        && rangeIntersectsNode(range, node)
+      ) {
+        return true;
+      }
+      node = walker.nextNode();
+    }
+
+    return false;
+  }
+
+  function isWrappableTextNode(node) {
+    if (node.nodeType !== Node.TEXT_NODE || !node.parentElement) {
+      return false;
+    }
+
+    const parentTag = node.parentElement.tagName.toLowerCase();
+    return parentTag !== 'ul' && parentTag !== 'ol';
+  }
+
+  function collectTextNodesInRange(range) {
+    /** @type {Text[]} */
+    const nodes = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+
+    while (node) {
+      if (isWrappableTextNode(node) && rangeIntersectsNode(range, node)) {
+        nodes.push(/** @type {Text} */ (node));
+      }
+      node = walker.nextNode();
+    }
+
+    return nodes;
+  }
+
+  function wrapTextNodesInRange(range, tag) {
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+    const endContainer = range.endContainer;
+    const endOffset = range.endOffset;
+
+    /** @type {Text[]} */
+    const pieces = [];
+
+    for (const textNode of collectTextNodesInRange(range)) {
+      let from = 0;
+      let to = textNode.length;
+
+      if (textNode === startContainer) {
+        from = startOffset;
+      }
+      if (textNode === endContainer) {
+        to = endOffset;
+      }
+      if (from >= to) {
+        continue;
+      }
+
+      let piece = textNode;
+      if (to < piece.length) {
+        piece.splitText(to);
+      }
+      if (from > 0) {
+        piece = piece.splitText(from);
+      }
+      if (piece.textContent) {
+        pieces.push(piece);
+      }
+    }
+
+    /** @type {HTMLElement | null} */
+    let firstWrapper = null;
+    /** @type {HTMLElement | null} */
+    let lastWrapper = null;
+
+    for (const piece of pieces) {
+      const wrapper = document.createElement(tag);
+      piece.parentNode?.insertBefore(wrapper, piece);
+      wrapper.appendChild(piece);
+      if (!firstWrapper) {
+        firstWrapper = wrapper;
+      }
+      lastWrapper = wrapper;
+    }
+
+    if (!firstWrapper || !lastWrapper) {
+      return;
     }
 
     const newRange = document.createRange();
-    newRange.selectNodeContents(wrapper);
+    newRange.setStart(firstWrapper, 0);
+    newRange.setEnd(lastWrapper, lastWrapper.childNodes.length);
     selection.setRange(newRange);
+  }
+
+  function wrapRangeWithTag(range, tag) {
+    if (!rangeContainsBlock(range)) {
+      const wrapper = document.createElement(tag);
+      try {
+        range.surroundContents(wrapper);
+        const newRange = document.createRange();
+        newRange.selectNodeContents(wrapper);
+        selection.setRange(newRange);
+        return;
+      } catch {
+        wrapTextNodesInRange(range, tag);
+        return;
+      }
+    }
+
+    wrapTextNodesInRange(range, tag);
   }
 
   function exitInlineAtCursor(inlineElement, range) {

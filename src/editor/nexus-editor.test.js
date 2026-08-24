@@ -54,7 +54,7 @@ describe('nexus-editor', () => {
     expect(editor.style.getPropertyValue('--nexus-editor-height')).toBe('400px')
     expect(editor.style.height).toBe('400px')
     expect(editor.style.flexGrow).toBe('0')
-    expect(editor.style.getPropertyValue('--nexus-content-min-height')).toBe('0px')
+    expect(editor.style.getPropertyValue('--nexus-content-min-height')).toBe('0')
   })
 
   it('forwards aria-labelledby from the host to the textbox', () => {
@@ -151,10 +151,29 @@ describe('nexus-editor', () => {
     expect(editor.getContent({ format: 'html' })).toBe('<p>Hello</p>')
   })
 
-  it('throws for unsupported content format', () => {
+  it('returns ast content when requested', () => {
     const editor = mountEditor()
 
-    expect(() => editor.getContent({ format: 'ast' })).toThrow('not supported')
+    editor.setContent('<p>Hello <strong>world</strong></p>')
+    expect(editor.getContent({ format: 'ast' })).toEqual({
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tag: 'p',
+          attrs: {},
+          children: [
+            { type: 'text', value: 'Hello ' },
+            {
+              type: 'element',
+              tag: 'strong',
+              attrs: {},
+              children: [{ type: 'text', value: 'world' }],
+            },
+          ],
+        },
+      ],
+    })
   })
 
   it('execCommand applies bold formatting', () => {
@@ -202,6 +221,16 @@ describe('nexus-editor', () => {
     const editor = mountEditor()
     editor.setContent('<p><img src="/img.png" alt="foto"></p>')
     expect(editor.contentElement.hasAttribute('data-empty')).toBe(false)
+  })
+
+  it('restores the empty placeholder after undoing image-only content', () => {
+    const editor = mountEditor()
+    editor.setContent('<p><img src="/img.png" alt="foto"></p>')
+
+    editor.execCommand('undo')
+
+    expect(editor.contentElement.querySelector('img')).toBeNull()
+    expect(editor.contentElement.hasAttribute('data-empty')).toBe(true)
   })
 
   it('sanitizes pasted html', () => {

@@ -26,7 +26,7 @@ describe('plugin-basic-formats', () => {
 
     pluginBasicFormats.destroy(editor)
     expect(editor.toolbar.shadowRoot.querySelector('[data-command="bold"]')).toBeNull()
-    expect(editor.toolbar.shadowRoot.querySelector('[data-menu-trigger]')).toBeNull()
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="formatBlock"]')).toBeNull()
     expect(editor.toolbar.shadowRoot.querySelector('[data-command="undo"]')).not.toBeNull()
   })
 

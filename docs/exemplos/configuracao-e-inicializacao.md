@@ -64,9 +64,10 @@ export const editorConfig = {
 | `undo`, `redo` | core do editor | Sempre registrados ao conectar |
 | `formatBlock` | plugin `basic-formats` | Menu Parágrafo / H1–H3 / Citação |
 | `bold`, `italic`, `underline` | plugin `basic-formats` | |
-| `insertUnorderedList`, `insertOrderedList` | plugin da página hospedeira | Na demo ainda estão desabilitados |
-| `insertLink`, `insertImage` | plugin da página hospedeira | `insertImage` ainda desabilitado na demo |
-| `toggleSource` | plugin da página hospedeira | Alterna visual / código |
+| `insertUnorderedList`, `insertOrderedList` | plugin `lists` | Tab / Shift+Tab dentro de listas |
+| `insertLink` | plugin `link` | Atalho `Ctrl+K`; links abrem em nova aba |
+| `insertImage` | plugin `media` | Upload local via `StorageAdapter` |
+| `toggleSource` | plugin `source-code` | Alterna visual / código |
 
 ---
 
@@ -99,6 +100,11 @@ export const editorConfig = {
 ```javascript
 import { createNexusEditor } from '/src/editor/nexus-editor.js'
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js'
+import { pluginLists } from '/src/plugins/lists/index.js'
+import { pluginLink } from '/src/plugins/link/index.js'
+import { pluginMedia } from '/src/plugins/media/index.js'
+import { pluginPasteClean } from '/src/plugins/paste-clean/index.js'
+import { pluginSourceCode } from '/src/plugins/source-code/index.js'
 import { editorConfig } from './nexus-config.js'
 
 function initEditor(root) {
@@ -111,6 +117,11 @@ function initEditor(root) {
   editor.setAttribute('aria-labelledby', 'post-body-label')
 
   editor.use(pluginBasicFormats)
+  editor.use(pluginLists)
+  editor.use(pluginLink)
+  editor.use(pluginMedia)
+  editor.use(pluginPasteClean)
+  editor.use(pluginSourceCode)
   editor.setContent('<p>Comece a escrever…</p>')
   mount.appendChild(editor)
 
@@ -150,6 +161,11 @@ function initEditor(root) {
 
   editor.configure(editorConfig)
   editor.use(pluginBasicFormats)
+  editor.use(pluginLists)
+  editor.use(pluginLink)
+  editor.use(pluginMedia)
+  editor.use(pluginPasteClean)
+  editor.use(pluginSourceCode)
   editor.setContent('<p>Comece a escrever…</p>')
 
   return () => editor.destroy()
@@ -234,7 +250,7 @@ form.addEventListener('submit', async (event) => {
 })
 ```
 
-`getContent({ format: 'html' })` devolve HTML sanitizado (schema do editor). Não leia `innerHTML` direto.
+`getContent({ format: 'html' })` devolve HTML sanitizado (schema do editor). `getContent({ format: 'ast' })` devolve a árvore JSON derivada do DOM. Não leia `innerHTML` direto.
 
 Formulário clássico (POST nativo): copie o HTML para um hidden **no submit**, não a cada tecla.
 

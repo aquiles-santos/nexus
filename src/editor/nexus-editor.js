@@ -1,4 +1,8 @@
-import { filterHtml } from '../core/schema.js';
+import { serializeAst } from '../data/ast-serializer.js';
+import { serializeHtml } from '../data/html-serializer.js';
+import { parseHtml } from '../data/html-parser.js';
+import { sanitizeHtml } from '../data/sanitizer.js';
+import { getActiveListType, findAncestorAnchor } from '../core/content-queries.js';
 import { createSelectionManager } from '../core/selection.js';
 import { createCommands } from '../core/commands.js';
 import { createUndoManager } from '../core/undo-manager.js';
@@ -226,7 +230,7 @@ class NexusEditorElement extends HTMLElement {
       return;
     }
 
-    this.style.setProperty('--nexus-content-min-height', '0px');
+    this.style.setProperty('--nexus-content-min-height', '0');
     this.style.flexGrow = '0';
     this.style.flexShrink = '0';
     this.style.flexBasis = 'auto';
@@ -340,6 +344,7 @@ class NexusEditorElement extends HTMLElement {
       } else {
         this._undo?.undo();
       }
+      this._checkEmpty();
       this._updateToolbarState();
       this._updateHistoryButtons();
       return;
@@ -348,6 +353,7 @@ class NexusEditorElement extends HTMLElement {
     if (key === 'Ctrl+Y') {
       event.preventDefault();
       this._undo?.redo();
+      this._checkEmpty();
       this._updateToolbarState();
       this._updateHistoryButtons();
     }
@@ -384,12 +390,10 @@ class NexusEditorElement extends HTMLElement {
 
     range.deleteContents();
 
-    const sanitized = html ? filterHtml(html) : '';
-    if (sanitized) {
-      const template = document.createElement('template');
-      template.innerHTML = sanitized;
-      const lastNode = template.content.lastChild;
-      range.insertNode(template.content);
+    const fragment = html ? parseHtml(html, this._bus) : null;
+    if (fragment?.hasChildNodes()) {
+      const lastNode = fragment.lastChild;
+      range.insertNode(fragment);
       if (lastNode) {
         range.setStartAfter(lastNode);
         range.collapse(true);
@@ -435,9 +439,29 @@ class NexusEditorElement extends HTMLElement {
     }
 
     const activeBlock = formatter.getActiveBlockTag();
+    const range = this._selection?.getRange();
+    const activeListType = range
+      ? getActiveListType(this._content, this._selection)
+      : null;
+    const isInsideLink = range
+      ? Boolean(findAncestorAnchor(this._content, range.startContainer))
+      : false;
+
     this._toolbar.updatePressed((command, value) => {
       if (command === 'formatBlock') {
         return Boolean(value) && value === activeBlock;
+      }
+      if (command === 'insertUnorderedList') {
+        return activeListType === 'ul';
+      }
+      if (command === 'insertOrderedList') {
+        return activeListType === 'ol';
+      }
+      if (command === 'insertLink') {
+        return isInsideLink;
+      }
+      if (command === 'toggleSource') {
+        return this.getAttribute('data-mode') === 'source';
       }
       return formatter.isActive(command);
     });
@@ -451,22 +475,39 @@ class NexusEditorElement extends HTMLElement {
   }
 
   /**
-   * @param {{ format?: 'html' }} [options]
-   * @returns {string}
+   * @param {{ format?: 'html' | 'ast' }} [options]
+   * @returns {string | import('../data/ast-serializer.js').AstRoot}
    */
   getContent(options = {}) {
     const { format = 'html' } = options;
+
+    if (this.getAttribute('data-mode') === 'source') {
+      const sourceInput = this.querySelector('[data-source-input]');
+      if (sourceInput instanceof HTMLTextAreaElement) {
+        const html = sanitizeHtml(sourceInput.value);
+        if (format === 'ast') {
+          const template = document.createElement('template');
+          template.innerHTML = html;
+          return serializeAst(template.content);
+        }
+        return html;
+      }
+    }
+
+    if (format === 'ast') {
+      return serializeAst(this._content);
+    }
 
     if (format !== 'html') {
       throw new Error(`Format "${format}" is not supported yet`);
     }
 
-    return filterHtml(this._content.innerHTML);
+    return serializeHtml(this._content);
   }
 
   setContent(html) {
     this._undo?.record();
-    this._content.innerHTML = filterHtml(html) || INITIAL_CONTENT;
+    this._content.innerHTML = sanitizeHtml(html) || INITIAL_CONTENT;
     this._checkEmpty();
     this._undo?.record();
     this._updateToolbarState();
@@ -488,6 +529,7 @@ class NexusEditorElement extends HTMLElement {
 
       if (name === 'undo') {
         this._undo?.undo();
+        this._checkEmpty();
         this._updateToolbarState();
         this._updateHistoryButtons();
         return true;
@@ -495,6 +537,7 @@ class NexusEditorElement extends HTMLElement {
 
       if (name === 'redo') {
         this._undo?.redo();
+        this._checkEmpty();
         this._updateToolbarState();
         this._updateHistoryButtons();
         return true;
@@ -521,7 +564,15 @@ class NexusEditorElement extends HTMLElement {
     } finally {
       this._isExecutingCommand = false;
       if (!this._modal.dialog.open) {
-        this._content.focus({ preventScroll: true });
+        const sourceInput = this.querySelector('[data-source-input]');
+        if (
+          this.getAttribute('data-mode') === 'source'
+          && sourceInput instanceof HTMLTextAreaElement
+        ) {
+          sourceInput.focus({ preventScroll: true });
+        } else {
+          this._content.focus({ preventScroll: true });
+        }
       }
     }
   }
@@ -562,6 +613,18 @@ class NexusEditorElement extends HTMLElement {
 
   get bus() {
     return this._bus;
+  }
+
+  get selection() {
+    return this._selection;
+  }
+
+  updateToolbarState() {
+    this._updateToolbarState();
+  }
+
+  recordUndo() {
+    this._undo?.record();
   }
 
   /**

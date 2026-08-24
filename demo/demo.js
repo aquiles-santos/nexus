@@ -1,8 +1,11 @@
 import '/src/editor/nexus-editor.js';
 import { DEFAULT_TOOLBAR } from '/src/editor/editor-config.js';
-import { isSafeHref } from '/src/core/schema.js';
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
-import { createToolbarIcon } from '/src/ui/icons/icons.js';
+import { pluginLists } from '/src/plugins/lists/index.js';
+import { pluginLink } from '/src/plugins/link/index.js';
+import { pluginMedia } from '/src/plugins/media/index.js';
+import { pluginPasteClean } from '/src/plugins/paste-clean/index.js';
+import { pluginSourceCode } from '/src/plugins/source-code/index.js';
 
 const SAMPLE_HTML = `
 <h1>The Architecture of Modern Content Systems</h1>
@@ -30,81 +33,17 @@ export function initDemo(root) {
   const charCount = root.querySelector('[data-char-count]');
   const saveStatus = root.querySelector('[data-save-status]');
   const viewButtons = [...root.querySelectorAll('[data-view]')];
-  const sourceInput = root.querySelector('[data-source-input]');
 
   if (
     !(editor instanceof HTMLElement) ||
     !wordCount ||
     !charCount ||
-    !saveStatus ||
-    !sourceInput
+    !saveStatus
   ) {
     return () => {};
   }
 
-  /** @type {Range | null} */
-  let linkRange = null;
   let saveTimer = null;
-  /** @type {(() => void)[]} */
-  const chromeTeardowns = [];
-
-  const chromePlugin = {
-    name: 'host-chrome',
-    init(instance) {
-      chromeTeardowns.push(
-        instance.toolbar.registerItem('insertUnorderedList', {
-          command: 'insertUnorderedList',
-          label: 'Lista com marcadores (em breve)',
-          icon: () => createToolbarIcon('listUl'),
-          disabled: true,
-        }),
-        instance.toolbar.registerItem('insertOrderedList', {
-          command: 'insertOrderedList',
-          label: 'Lista numerada (em breve)',
-          icon: () => createToolbarIcon('listOl'),
-          disabled: true,
-        }),
-        instance.toolbar.registerItem('insertLink', {
-          command: 'insertLink',
-          label: 'Link',
-          icon: () => createToolbarIcon('link'),
-        }),
-        instance.toolbar.registerItem('insertImage', {
-          command: 'insertImage',
-          label: 'Imagem (em breve)',
-          icon: () => createToolbarIcon('image'),
-          disabled: true,
-        }),
-        instance.toolbar.registerItem('toggleSource', {
-          command: 'toggleSource',
-          label: 'Código',
-          icon: () => createToolbarIcon('code'),
-        }),
-      );
-    },
-    commands: {
-      insertLink() {
-        openLinkModal();
-      },
-      applyLink(_instance, payload) {
-        applyLinkToSelection(payload);
-      },
-      toggleSource() {
-        setView(
-          editor.getAttribute('data-mode') === 'source' ? 'visual' : 'source',
-        );
-      },
-    },
-    shortcuts: {
-      'Ctrl+K': 'insertLink',
-    },
-    destroy() {
-      for (const teardown of chromeTeardowns) {
-        teardown();
-      }
-      chromeTeardowns.length = 0;
-    },
-  };
 
   editor.configure({
     toolbar: [
@@ -120,10 +59,14 @@ export function initDemo(root) {
     ],
   });
   editor.use(pluginBasicFormats);
-  editor.use(chromePlugin);
+  editor.use(pluginLists);
+  editor.use(pluginLink);
+  editor.use(pluginMedia);
+  editor.use(pluginPasteClean);
+  editor.use(pluginSourceCode);
   editor.setContent(SAMPLE_HTML);
   updateCounts();
-  setView('visual');
+  syncViewButtons('visual');
 
   editor.addEventListener('input', handleEditorInput);
   for (const button of viewButtons) {
@@ -163,176 +106,23 @@ export function initDemo(root) {
   }
 
   function setView(mode) {
-    if (mode === 'source') {
-      sourceInput.value = formatHtml(editor.getContent({ format: 'html' }));
-      editor.setAttribute('data-mode', 'source');
-    } else {
-      if (editor.getAttribute('data-mode') === 'source') {
-        editor.setContent(sourceInput.value);
-        updateCounts();
-      }
-      editor.removeAttribute('data-mode');
-    }
-
     const isSource = mode === 'source';
+    if (isSource && editor.getAttribute('data-mode') !== 'source') {
+      editor.execCommand('toggleSource');
+    } else if (!isSource && editor.getAttribute('data-mode') === 'source') {
+      editor.execCommand('toggleSource');
+      updateCounts();
+    }
+    syncViewButtons(mode);
+  }
+
+  function syncViewButtons(mode) {
     for (const button of viewButtons) {
       button.setAttribute(
         'aria-pressed',
         String(button.getAttribute('data-view') === mode),
       );
     }
-
-    editor.toolbar.setPressed('toggleSource', isSource);
-    editor.toolbar.setLabel('toggleSource', isSource ? 'Visual' : 'Código');
-    editor.toolbar.setIcon(
-      'toggleSource',
-      createToolbarIcon(isSource ? 'eye' : 'code'),
-    );
-  }
-
-  function openLinkModal() {
-    const selection = window.getSelection();
-    linkRange =
-      selection && selection.rangeCount > 0
-        ? selection.getRangeAt(0).cloneRange()
-        : null;
-
-    const form = document.createElement('form');
-    form.noValidate = true;
-
-    const textField = createField('Display Text', 'link-text', {
-      placeholder: 'Link text',
-    });
-    const urlField = createUrlField();
-    form.append(textField.field, urlField.field);
-
-    if (linkRange && !linkRange.collapsed) {
-      textField.input.value = linkRange.toString();
-    }
-
-    function handleInsert() {
-      const href = urlField.input.value.trim();
-      if (!isSafeHref(href)) {
-        urlField.error.hidden = false;
-        urlField.error.textContent =
-          'Enter a valid http, https, mailto, or tel URL.';
-        urlField.input.setAttribute('aria-invalid', 'true');
-        urlField.input.focus();
-        return;
-      }
-
-      urlField.error.hidden = true;
-      urlField.input.removeAttribute('aria-invalid');
-      editor.execCommand('applyLink', {
-        href,
-        text: textField.input.value.trim(),
-      });
-      editor.modal.close();
-      queueMicrotask(() => {
-        editor.contentElement.focus({ preventScroll: true });
-      });
-    }
-
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      handleInsert();
-    });
-
-    editor.modal.open({
-      title: 'Insert link',
-      content: form,
-      actions: [
-        {
-          label: 'Insert',
-          primary: true,
-          action: handleInsert,
-        },
-        { label: 'Cancel', action: () => {} },
-      ],
-    });
-
-    queueMicrotask(() => textField.input.focus());
-  }
-
-  function applyLinkToSelection({ href, text } = {}) {
-    if (
-      !isSafeHref(href) ||
-      !editor.contentElement.contains(
-        linkRange?.commonAncestorContainer ?? null,
-      )
-    ) {
-      return;
-    }
-
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(linkRange);
-
-    const anchor = document.createElement('a');
-    anchor.setAttribute('href', href);
-
-    if (linkRange.collapsed) {
-      anchor.textContent = text || href;
-      linkRange.insertNode(anchor);
-    } else if (text && text !== linkRange.toString()) {
-      linkRange.deleteContents();
-      anchor.textContent = text;
-      linkRange.insertNode(anchor);
-    } else {
-      try {
-        linkRange.surroundContents(anchor);
-      } catch {
-        const contents = linkRange.extractContents();
-        anchor.appendChild(contents);
-        linkRange.insertNode(anchor);
-      }
-    }
-
-    linkRange = null;
-  }
-
-  function createField(
-    labelText,
-    id,
-    { type = 'text', placeholder = '', required = false } = {},
-  ) {
-    const field = document.createElement('div');
-    field.className = 'modal__field';
-
-    const label = document.createElement('label');
-    label.className = 'modal__label';
-    label.setAttribute('for', id);
-    label.textContent = labelText;
-
-    const input = document.createElement('input');
-    input.className = 'modal__input';
-    input.id = id;
-    input.type = type;
-    input.setAttribute('placeholder', placeholder);
-    input.autocomplete = 'off';
-    input.required = required;
-
-    field.append(label, input);
-    return { field, input };
-  }
-
-  function createUrlField() {
-    const { field, input } = createField('URL', 'link-url', {
-      type: 'url',
-      placeholder: 'https://',
-      required: true,
-    });
-
-    const error = document.createElement('p');
-    error.id = 'link-url-error';
-    error.className = 'modal__error';
-    error.setAttribute('data-url-error', '');
-    error.setAttribute('role', 'alert');
-    error.hidden = true;
-    input.setAttribute('aria-describedby', error.id);
-    field.append(error);
-
-    return { field, input, error };
   }
 
   return () => {
@@ -343,12 +133,7 @@ export function initDemo(root) {
     if (saveTimer) {
       clearTimeout(saveTimer);
     }
-    chromePlugin.destroy();
   };
-}
-
-function formatHtml(html) {
-  return html.replace(/></g, '>\n<').replace(/\n+/g, '\n').trim();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

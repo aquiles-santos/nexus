@@ -36,7 +36,7 @@ const ALLOWED_ATTRS = {
 const DEFAULT_BLOCK = 'p';
 
 const LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
-const MEDIA_PROTOCOLS = new Set(['http:', 'https:']);
+const MEDIA_PROTOCOLS = new Set(['http:', 'https:', 'blob:']);
 
 export const INLINE_COMMAND_TAGS = {
   bold: 'strong',
@@ -176,6 +176,24 @@ function sanitizeNode(node) {
 
   for (const child of [...element.childNodes]) {
     sanitizeNode(child);
+  }
+
+  if (tag === 'ul' || tag === 'ol') {
+    const parent = element.parentElement;
+    if (parent) {
+      const parentTag = parent.tagName.toLowerCase();
+      if (parentTag === 'ul' || parentTag === 'ol') {
+        while (element.firstChild) {
+          parent.insertBefore(element.firstChild, element);
+        }
+        parent.removeChild(element);
+        return;
+      }
+    }
+
+    if (element.children.length === 0) {
+      element.remove();
+    }
   }
 }
 

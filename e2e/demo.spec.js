@@ -65,6 +65,79 @@ test('format block as heading', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Estilo do bloco' })).toContainText('Título 1')
 })
 
+test('block style menu is not covered by the editor canvas', async ({ page }) => {
+  await page.goto('/demo/')
+
+  await page.getByRole('button', { name: 'Estilo do bloco' }).click()
+
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  await expect(page.getByRole('menuitemradio', { name: 'Título 1' })).toBeVisible()
+
+  const coverage = await page.evaluate(() => {
+    const editor = document.querySelector('nexus-editor')
+    const toolbar = editor?.shadowRoot?.querySelector('nexus-toolbar')
+    const menu = toolbar?.shadowRoot?.querySelector('[role="menu"]:not([hidden])')
+    if (!editor || !toolbar || !menu) {
+      return { hitRole: null, menuHeight: 0, extendsOverCanvas: false }
+    }
+
+    const menuBox = menu.getBoundingClientRect()
+    const toolbarBox = toolbar.getBoundingClientRect()
+    const x = menuBox.left + Math.min(40, menuBox.width / 2)
+    const y = toolbarBox.bottom + 16
+
+    let node = document.elementFromPoint(x, y)
+    while (node?.shadowRoot) {
+      const inner = node.shadowRoot.elementFromPoint(x, y)
+      if (!inner || inner === node) {
+        break
+      }
+      node = inner
+    }
+
+    return {
+      hitRole: node instanceof Element ? node.getAttribute('role') : null,
+      extendsOverCanvas: menuBox.bottom > toolbarBox.bottom + 40,
+      menuHeight: menuBox.height,
+    }
+  })
+
+  expect(coverage.menuHeight).toBeGreaterThan(80)
+  expect(coverage.extendsOverCanvas).toBe(true)
+  expect(coverage.hitRole).toBe('menuitemradio')
+})
+
+test('block style tooltip is not clipped by the toolbar', async ({ page }) => {
+  await page.goto('/demo/')
+  await page.getByRole('button', { name: 'Estilo do bloco' }).hover()
+
+  const tooltip = page.getByRole('tooltip', { name: 'Estilo do bloco' })
+  await expect(tooltip).toBeVisible()
+
+  const stacking = await page.evaluate(() => {
+    const editor = document.querySelector('nexus-editor')
+    const toolbar = editor?.shadowRoot?.querySelector('nexus-toolbar')
+    const tooltipHost = editor?.shadowRoot?.querySelector('nexus-tooltip')
+    const tooltip = tooltipHost?.shadowRoot?.querySelector('[role="tooltip"]')
+    if (!toolbar || !tooltipHost || !tooltip) {
+      return null
+    }
+
+    return {
+      tooltipZ: Number.parseInt(getComputedStyle(tooltipHost).zIndex, 10),
+      toolbarZ: Number.parseInt(getComputedStyle(toolbar).zIndex, 10),
+      tooltipHeight: tooltip.getBoundingClientRect().height,
+      tooltipWidth: tooltip.getBoundingClientRect().width,
+    }
+  })
+
+  expect(stacking).not.toBeNull()
+  expect(stacking.tooltipHeight).toBeGreaterThan(16)
+  expect(stacking.tooltipWidth).toBeGreaterThan(40)
+  expect(stacking.tooltipZ).toBeGreaterThan(stacking.toolbarZ)
+})
+
 test('toolbar button deactivates after removing style', async ({ page }) => {
   await page.goto('/demo/')
   await clearEditor(page)
@@ -151,8 +224,235 @@ test('inserts a link from the modal', async ({ page }) => {
 
   await expect(dialog).toBeHidden()
   await expect(content.locator('a')).toHaveAttribute('href', 'https://example.com')
+  await expect(content.locator('a')).toHaveAttribute('target', '_blank')
   await expect(content.locator('a')).toHaveText('Nexus')
   await expect(content).toBeFocused()
+})
+
+test('inserts a link with Ctrl+K', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Shortcut link')
+  await page.keyboard.press('Control+a')
+  await page.keyboard.press('Control+k')
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('URL').fill('https://example.com/docs')
+  await dialog.getByRole('button', { name: 'Insert' }).click()
+
+  await expect(content.locator('a')).toHaveAttribute('href', 'https://example.com/docs')
+})
+
+test('creates a bullet list from the toolbar', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('First item')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+
+  await expect(content.locator('ul li')).toHaveText('First item')
+})
+
+test('removes bullet list formatting without deleting content', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Alpha')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Beta')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+
+  await expect(content.locator('ul')).toHaveCount(0)
+  await expect(content.locator('p')).toHaveCount(2)
+  await expect(content.locator('p').nth(0)).toHaveText('Alpha')
+  await expect(content.locator('p').nth(1)).toHaveText('Beta')
+})
+
+test('inline formatting on a list does not add empty items', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Item 1')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Item 2')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Item 3')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Sublinhado' }).click()
+
+  await expect(content.locator('ul > li')).toHaveCount(3)
+  await expect(content.locator('ul > li')).toHaveText(['Item 1', 'Item 2', 'Item 3'])
+  await expect(content.locator('li u')).toHaveCount(3)
+  await expect(content.locator('ul > u')).toHaveCount(0)
+})
+
+test('converts a bullet list to a numbered list without nesting', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Alpha')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Beta')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  await expect(content.locator('ol > li')).toHaveCount(2)
+  await expect(content.locator('ol > li')).toHaveText(['Alpha', 'Beta'])
+  await expect(content.locator('ul')).toHaveCount(0)
+  await expect(content.locator('ol')).toHaveCount(1)
+})
+
+test('removes a numbered list after conversion without leftover nodes', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Alpha')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Beta')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  await expect(content.locator('ul, ol, li')).toHaveCount(0)
+  await expect(content.locator('p')).toHaveCount(2)
+  await expect(content.locator('p').nth(0)).toHaveText('Alpha')
+  await expect(content.locator('p').nth(1)).toHaveText('Beta')
+})
+
+test('creates a numbered list with sequential items', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('First')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Second')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  const items = content.locator('ol > li')
+  await expect(items).toHaveCount(2)
+  await expect(items.nth(0)).toHaveText('First')
+  await expect(items.nth(1)).toHaveText('Second')
+  await expect(content.locator('ol')).toHaveCount(1)
+})
+
+test('nests a numbered list inside a bullet list item', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Item 1')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Subitem')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Item 2')
+  await page.keyboard.press('Control+a')
+  await page.getByRole('button', { name: 'Lista com marcadores' }).click()
+
+  await content.locator('li').nth(1).click()
+  await page.keyboard.press('Tab')
+  await page.getByRole('button', { name: 'Lista numerada' }).click()
+
+  await expect(content.locator('ul > li > ol > li')).toHaveText('Subitem')
+  await expect(content.locator('ul > li')).toHaveCount(2)
+  await expect(content.locator('ol')).toHaveCount(1)
+})
+
+test('cleans Word-like paste content', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+
+  await page.evaluate(async () => {
+    const editor = document.querySelector('nexus-editor')
+    const target = editor?.contentElement
+    if (!target) {
+      return
+    }
+
+    const data = new DataTransfer()
+    data.setData('text/html', '<p><b>Bold</b><span style="color:red"> text</span></p>')
+    target.dispatchEvent(
+      new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: data,
+      }),
+    )
+  })
+
+  await expect(content.locator('strong')).toHaveText('Bold')
+  await expect(content.locator('span')).toHaveCount(0)
+})
+
+test('round-trips source mode edits', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  const source = page.locator('[data-source-input]')
+
+  await page.getByRole('button', { name: 'Code' }).click()
+  await source.fill('<p>Edited in source</p>')
+  await page.getByRole('button', { name: 'Visual', exact: true }).click()
+
+  await expect(content.locator('p')).toHaveText('Edited in source')
+})
+
+test('inserts an image from the file picker', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: 'Imagem' }).click(),
+  ])
+
+  await fileChooser.setFiles({
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  })
+
+  await expect(content.locator('img')).toHaveCount(1)
+})
+
+test('shows overflow menu on narrow toolbar width', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await page.goto('/demo/')
+
+  await expect(page.getByRole('button', { name: 'Mais ferramentas' })).toBeVisible()
 })
 
 test('shows an error when the link href is unsafe', async ({ page }) => {
