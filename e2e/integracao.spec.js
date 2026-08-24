@@ -91,7 +91,10 @@ test('integration editor scrolls when content exceeds the configured height', as
   await expect(toolbar).toBeInViewport()
 })
 
-const MINIMAL_PNG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+const PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+)
 
 test('integration demo renders a local image inside the editor', async ({ page }) => {
   await page.goto('/demo/integracao/')
@@ -110,11 +113,12 @@ test('integration demo renders a local image inside the editor', async ({ page }
   await fileChooser.setFiles({
     name: 'photo.png',
     mimeType: 'image/png',
-    buffer: MINIMAL_PNG,
+    buffer: PIXEL_PNG,
   })
 
   const image = content.locator('img')
   await expect(image).toBeVisible()
+  await expect.poll(async () => image.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0)
   await expect(content).not.toHaveAttribute('data-empty')
 })
 
