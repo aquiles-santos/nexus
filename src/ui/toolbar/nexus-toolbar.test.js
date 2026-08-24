@@ -111,6 +111,28 @@ describe('nexus-toolbar', () => {
     expect(menu.hidden).toBe(true)
   })
 
+  it('opens the block style menu in a flyout outside the clipped toolbar row', () => {
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+    toolbar.addMenu({
+      command: 'formatBlock',
+      label: 'Estilo do bloco',
+      options: [
+        { value: 'p', label: 'Parágrafo' },
+        { value: 'h1', label: 'Título 1' },
+      ],
+    })
+
+    const trigger = toolbar.shadowRoot.querySelector('[data-menu-trigger]')
+    trigger.click()
+
+    const menu = toolbar.shadowRoot.querySelector('[role="menu"]')
+    const flyout = toolbar.shadowRoot.querySelector('[data-toolbar-flyout]')
+    expect(menu.hidden).toBe(false)
+    expect(flyout.contains(menu)).toBe(true)
+    expect(toolbar.shadowRoot.querySelector('.toolbar').contains(menu)).toBe(false)
+  })
+
   it('updates menu checked option and trigger label', () => {
     const toolbar = document.createElement('nexus-toolbar')
     document.body.appendChild(toolbar)
@@ -246,5 +268,91 @@ describe('nexus-toolbar', () => {
     expect(toolbar.shadowRoot.querySelector('[data-command]')).toBeNull()
     expect(() => teardown()).not.toThrow()
     warn.mockRestore()
+  })
+
+  it('moves low-priority tools into the overflow menu when space is tight', () => {
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+
+    toolbar.registerItem('bold', { command: 'bold', label: 'Negrito', type: 'toggle' })
+    toolbar.registerItem('toggleSource', {
+      command: 'toggleSource',
+      label: 'Código',
+      type: 'toggle',
+    })
+    toolbar.applyLayout(['bold', 'toggleSource'])
+
+    const inner = toolbar.shadowRoot.querySelector('.toolbar')
+    Object.defineProperty(inner, 'clientWidth', { configurable: true, value: 120 })
+    Object.defineProperty(inner, 'scrollWidth', { configurable: true, value: 320 })
+    toolbar.applyLayout(['bold', 'toggleSource'])
+
+    expect(
+      toolbar.shadowRoot.querySelector('[data-command="toggleSource"]')?.hidden,
+    ).toBe(true)
+    expect(
+      toolbar.shadowRoot.querySelector('.toolbar__overflow-wrap')?.hidden,
+    ).toBe(false)
+  })
+
+  it('moves keyboard focus between overflow menu items', () => {
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+
+    toolbar.registerItem('bold', { command: 'bold', label: 'Negrito', type: 'toggle' })
+    toolbar.registerItem('insertLink', { command: 'insertLink', label: 'Link' })
+    toolbar.registerItem('toggleSource', {
+      command: 'toggleSource',
+      label: 'Código',
+      type: 'toggle',
+    })
+    toolbar.applyLayout(['bold', 'insertLink', 'toggleSource'])
+
+    const inner = toolbar.shadowRoot.querySelector('.toolbar')
+    Object.defineProperty(inner, 'clientWidth', { configurable: true, value: 80 })
+    Object.defineProperty(inner, 'scrollWidth', { configurable: true, value: 400 })
+    toolbar.applyLayout(['bold', 'insertLink', 'toggleSource'])
+
+    const trigger = toolbar.shadowRoot.querySelector(
+      '.toolbar__overflow-wrap [data-menu-trigger]',
+    )
+    trigger.focus()
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+
+    const items = [
+      ...toolbar.shadowRoot.querySelectorAll('.toolbar__overflow-item'),
+    ]
+    expect(items.length).toBeGreaterThan(1)
+    expect(toolbar.shadowRoot.activeElement).toBe(items[0])
+
+    items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+    expect(toolbar.shadowRoot.activeElement).toBe(items[1])
+  })
+
+  it('updates overflow item labels when setLabel is called', () => {
+    const toolbar = document.createElement('nexus-toolbar')
+    document.body.appendChild(toolbar)
+
+    toolbar.registerItem('bold', { command: 'bold', label: 'Negrito', type: 'toggle' })
+    toolbar.registerItem('toggleSource', {
+      command: 'toggleSource',
+      label: 'Código',
+      type: 'toggle',
+    })
+    toolbar.applyLayout(['bold', 'toggleSource'])
+
+    const inner = toolbar.shadowRoot.querySelector('.toolbar')
+    Object.defineProperty(inner, 'clientWidth', { configurable: true, value: 120 })
+    Object.defineProperty(inner, 'scrollWidth', { configurable: true, value: 320 })
+    toolbar.applyLayout(['bold', 'toggleSource'])
+
+    toolbar.setLabel('toggleSource', 'Visual')
+    toolbar.setPressed('toggleSource', true)
+
+    const overflowItem = toolbar.shadowRoot.querySelector(
+      '.toolbar__overflow-item[data-command="toggleSource"]',
+    )
+    expect(overflowItem?.textContent).toBe('Visual')
+    expect(overflowItem?.getAttribute('aria-pressed')).toBe('true')
   })
 })
