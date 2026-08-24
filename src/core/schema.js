@@ -36,7 +36,7 @@ const ALLOWED_ATTRS = {
 const DEFAULT_BLOCK = 'p';
 
 const LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
-const MEDIA_PROTOCOLS = new Set(['http:', 'https:']);
+const MEDIA_PROTOCOLS = new Set(['http:', 'https:', 'blob:']);
 
 export const INLINE_COMMAND_TAGS = {
   bold: 'strong',
