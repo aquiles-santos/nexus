@@ -5,6 +5,7 @@ import { createUndoManager } from '../core/undo-manager.js';
 import { createEventBus } from '../shared/event-bus.js';
 import { createPluginRegistry, getShortcutKey } from '../shared/plugin-registry.js';
 import { createToolbarIcon } from '../ui/icons/icons.js';
+import { resolveEditorConfig } from './editor-config.js';
 import '../ui/toolbar/nexus-toolbar.js';
 import '../ui/tooltip/nexus-tooltip.js';
 import '../ui/modal/nexus-modal.js';
@@ -59,13 +60,17 @@ class NexusEditorElement extends HTMLElement {
     this._modal = document.createElement('nexus-modal');
     this._chrome.appendChild(this._modal);
 
+    this._scroller = document.createElement('div');
+    this._scroller.setAttribute('data-nexus-scroller', '');
+    this._scroller.part = 'scroller';
+
     this._content = document.createElement('div');
     this._content.setAttribute('data-nexus-content', '');
     this._content.setAttribute('contenteditable', 'true');
     this._content.setAttribute('role', 'textbox');
     this._content.setAttribute('aria-multiline', 'true');
-    this._content.setAttribute('aria-label', 'Editor de texto');
     this._content.part = 'content';
+    this._syncAccessibleName();
 
     /** @type {ReturnType<typeof createSelectionManager> | null} */
     this._selection = null;
@@ -85,6 +90,16 @@ class NexusEditorElement extends HTMLElement {
     this._plugins = [];
     /** @type {(() => void)[]} */
     this._historyTeardowns = [];
+    /** @type {import('./editor-config.js').NexusEditorConfig} */
+    this._config = resolveEditorConfig();
+  }
+
+  static get observedAttributes() {
+    return ['aria-label', 'aria-labelledby'];
+  }
+
+  attributeChangedCallback() {
+    this._syncAccessibleName();
   }
 
   connectedCallback() {
@@ -93,9 +108,8 @@ class NexusEditorElement extends HTMLElement {
     }
     this._initialized = true;
 
-    if (!this.contains(this._content)) {
-      this.appendChild(this._content);
-    }
+    this._applyHeight();
+    this._ensureScrollerLayout();
     if (!this._content.hasChildNodes()) {
       this._content.innerHTML = INITIAL_CONTENT;
     }
@@ -108,7 +122,7 @@ class NexusEditorElement extends HTMLElement {
     this._registry = createPluginRegistry(this, this._bus);
 
     this._undo.reset();
-    this._addHistoryButtons();
+    this._registerHistoryItems();
 
     this._toolbar.setCommandHandler((command, value) => {
       this.execCommand(command, value, this._toolbarBookmark);
@@ -132,10 +146,25 @@ class NexusEditorElement extends HTMLElement {
     for (const plugin of this._plugins) {
       this._registry.use(plugin);
     }
+
+    this._syncToolbar();
   }
 
   disconnectedCallback() {
     this._teardown();
+  }
+
+  _ensureScrollerLayout() {
+    if (!this.contains(this._scroller)) {
+      while (this.firstChild) {
+        this._scroller.appendChild(this.firstChild);
+      }
+      this.appendChild(this._scroller);
+    }
+
+    if (!this._scroller.contains(this._content)) {
+      this._scroller.appendChild(this._content);
+    }
   }
 
   _teardown() {
@@ -167,21 +196,77 @@ class NexusEditorElement extends HTMLElement {
     this._initialized = false;
   }
 
-  _addHistoryButtons() {
+  _registerHistoryItems() {
     this._historyTeardowns = [
-      this._toolbar.addButton({
+      this._toolbar.registerItem('undo', {
         command: 'undo',
         label: 'Desfazer',
-        icon: createToolbarIcon('undo'),
+        icon: () => createToolbarIcon('undo'),
       }),
-      this._toolbar.addButton({
+      this._toolbar.registerItem('redo', {
         command: 'redo',
         label: 'Refazer',
-        icon: createToolbarIcon('redo'),
+        icon: () => createToolbarIcon('redo'),
       }),
-      this._toolbar.addButton({ command: 'undo', label: '', separator: true }),
     ];
+  }
+
+  _applyHeight() {
+    const { height } = this._config;
+    const isFluid = height === '100%' || height === 'auto';
+
+    this.style.setProperty('--nexus-editor-height', height);
+    this.style.height = height;
+
+    if (isFluid) {
+      this.style.removeProperty('--nexus-content-min-height');
+      this.style.removeProperty('flex-grow');
+      this.style.removeProperty('flex-shrink');
+      this.style.removeProperty('flex-basis');
+      return;
+    }
+
+    this.style.setProperty('--nexus-content-min-height', '0px');
+    this.style.flexGrow = '0';
+    this.style.flexShrink = '0';
+    this.style.flexBasis = 'auto';
+  }
+
+  _syncAccessibleName() {
+    if (!this._content) {
+      return;
+    }
+
+    const labelledBy = this.getAttribute('aria-labelledby');
+    const label = this.getAttribute('aria-label');
+
+    if (labelledBy) {
+      this._content.setAttribute('aria-labelledby', labelledBy);
+      this._content.removeAttribute('aria-label');
+      return;
+    }
+
+    this._content.removeAttribute('aria-labelledby');
+    this._content.setAttribute('aria-label', label || 'Editor de texto');
+  }
+
+  _syncToolbar() {
+    this._toolbar.applyLayout(this._config.toolbar);
     this._updateHistoryButtons();
+  }
+
+  /**
+   * @param {import('./editor-config.js').NexusEditorConfigInput} [input]
+   */
+  configure(input = {}) {
+    this._config = resolveEditorConfig({
+      height: input.height !== undefined ? input.height : this._config.height,
+      toolbar: input.toolbar !== undefined ? input.toolbar : this._config.toolbar,
+    });
+    this._applyHeight();
+    if (this._initialized) {
+      this._syncToolbar();
+    }
   }
 
   _updateHistoryButtons() {
@@ -451,6 +536,7 @@ class NexusEditorElement extends HTMLElement {
 
     this._plugins.push(plugin);
     this._registry?.use(plugin);
+    this._updateToolbarState();
   }
 
   destroy() {
@@ -470,8 +556,30 @@ class NexusEditorElement extends HTMLElement {
     return this._content;
   }
 
+  get scrollerElement() {
+    return this._scroller;
+  }
+
   get bus() {
     return this._bus;
+  }
+
+  /**
+   * Resolved editor configuration. Assigning a new object merges with the current values.
+   * @returns {import('./editor-config.js').NexusEditorConfig}
+   */
+  get config() {
+    return {
+      height: this._config.height,
+      toolbar: [...this._config.toolbar],
+    };
+  }
+
+  /**
+   * @param {import('./editor-config.js').NexusEditorConfigInput} value
+   */
+  set config(value) {
+    this.configure(value ?? {});
   }
 }
 
@@ -483,10 +591,14 @@ if (!customElements.get(TAG_NAME)) {
 
 /**
  * Creates a nexus-editor element. Call `destroy()` to remove listeners and detach from the DOM.
+ * @param {import('./editor-config.js').NexusEditorConfigInput} [config]
  * @returns {{ element: NexusEditorElement, destroy: () => void }}
  */
-export function createNexusEditor() {
+export function createNexusEditor(config) {
   const element = document.createElement(TAG_NAME);
+  if (config !== undefined) {
+    element.configure(config);
+  }
   return {
     element,
     destroy() {
@@ -496,3 +608,8 @@ export function createNexusEditor() {
 }
 
 export { NexusEditorElement, TAG_NAME };
+export {
+  DEFAULT_EDITOR_HEIGHT,
+  DEFAULT_TOOLBAR,
+  TOOLBAR_SEPARATOR,
+} from './editor-config.js';

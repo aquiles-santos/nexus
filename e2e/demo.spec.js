@@ -184,3 +184,122 @@ test('code view shows document source', async ({ page }) => {
   await expect(source).toHaveValue(/<h1>/)
   await expect(page.locator('nexus-editor [data-nexus-content]')).toBeHidden()
 })
+
+test('toolbar stays visible when document content grows', async ({ page }) => {
+  await page.goto('/demo/')
+
+  const longContent = Array.from({ length: 80 }, (_, index) => `<p>Paragraph ${index + 1}</p>`).join('')
+  await page.locator('nexus-editor').evaluate((editor, html) => {
+    editor.setContent(html)
+  }, longContent)
+
+  const scroller = page.locator('nexus-editor [data-nexus-scroller]')
+  const toolbar = page.getByRole('toolbar')
+
+  const scrollMetrics = await scroller.evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    paddingTop: Number.parseFloat(getComputedStyle(element).paddingTop),
+    paddingBottom: Number.parseFloat(getComputedStyle(element).paddingBottom),
+  }))
+  expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight)
+  expect(scrollMetrics.paddingTop).toBeGreaterThan(0)
+  expect(scrollMetrics.paddingBottom).toBeGreaterThan(0)
+
+  await expect(toolbar).toBeInViewport()
+
+  await scroller.evaluate((element) => {
+    element.scrollTop = element.scrollHeight
+  })
+
+  await expect(toolbar).toBeInViewport()
+})
+
+test('focus border stays inside the scroller when content overflows', async ({ page }) => {
+  await page.goto('/demo/')
+
+  const longContent = Array.from({ length: 80 }, (_, index) => `<p>Paragraph ${index + 1}</p>`).join('')
+  await page.locator('nexus-editor').evaluate((editor, html) => {
+    editor.setContent(html)
+  }, longContent)
+
+  const scroller = page.locator('nexus-editor [data-nexus-scroller]')
+  const content = page.locator('nexus-editor [data-nexus-content]')
+
+  await content.click()
+
+  const edgesVisibleAtTop = await scroller.evaluate((element) => {
+    element.scrollTop = 0
+
+    const content = element.querySelector('[data-nexus-content]')
+    if (!content) {
+      return false
+    }
+
+    const scrollerRect = element.getBoundingClientRect()
+    const contentRect = content.getBoundingClientRect()
+    const paddingTop = Number.parseFloat(getComputedStyle(element).paddingTop)
+    const borderColor = getComputedStyle(content).borderTopColor
+
+    return (
+      contentRect.top >= scrollerRect.top + paddingTop - 1
+      && borderColor !== 'rgba(0, 0, 0, 0)'
+      && borderColor !== 'transparent'
+    )
+  })
+
+  const edgesVisibleAtBottom = await scroller.evaluate((element) => {
+    element.scrollTop = element.scrollHeight - element.clientHeight
+
+    const content = element.querySelector('[data-nexus-content]')
+    if (!content) {
+      return false
+    }
+
+    const scrollerRect = element.getBoundingClientRect()
+    const contentRect = content.getBoundingClientRect()
+    const paddingBottom = Number.parseFloat(getComputedStyle(element).paddingBottom)
+    const borderColor = getComputedStyle(content).borderBottomColor
+
+    return (
+      contentRect.bottom <= scrollerRect.bottom - paddingBottom + 1
+      && borderColor !== 'rgba(0, 0, 0, 0)'
+      && borderColor !== 'transparent'
+    )
+  })
+
+  expect(edgesVisibleAtTop).toBe(true)
+  expect(edgesVisibleAtBottom).toBe(true)
+})
+
+test('demo toolbar follows the configured tool order', async ({ page }) => {
+  await page.goto('/demo/')
+
+  const order = await page.locator('nexus-editor').evaluate((editor) =>
+    [...editor.toolbar.shadowRoot.querySelectorAll('[data-toolbar-item]')].map((node) =>
+      node.getAttribute('data-toolbar-item'),
+    ),
+  )
+
+  expect(order.indexOf('undo')).toBeLessThan(order.indexOf('formatBlock'))
+  expect(order.indexOf('formatBlock')).toBeLessThan(order.indexOf('bold'))
+  expect(order.indexOf('bold')).toBeLessThan(order.indexOf('insertLink'))
+  expect(order.indexOf('insertLink')).toBeLessThan(order.indexOf('toggleSource'))
+})
+
+test('host can set a custom editor height', async ({ page }) => {
+  await page.goto('/demo/')
+
+  const metrics = await page.locator('nexus-editor').evaluate((editor) => {
+    editor.configure({ height: 320 })
+    return {
+      config: editor.config.height,
+      css: editor.style.getPropertyValue('--nexus-editor-height'),
+      offset: Math.round(editor.getBoundingClientRect().height),
+    }
+  })
+
+  expect(metrics.config).toBe('320px')
+  expect(metrics.css).toBe('320px')
+  expect(metrics.offset).toBe(320)
+})
