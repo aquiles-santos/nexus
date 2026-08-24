@@ -1,4 +1,5 @@
 import '/src/editor/nexus-editor.js';
+import { DEFAULT_TOOLBAR } from '/src/editor/editor-config.js';
 import { isSafeHref } from '/src/core/schema.js';
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
 import { createToolbarIcon } from '/src/ui/icons/icons.js';
@@ -51,48 +52,33 @@ export function initDemo(root) {
     name: 'host-chrome',
     init(instance) {
       chromeTeardowns.push(
-        instance.toolbar.addButton({
-          command: 'formatBlock',
-          label: '',
-          separator: true,
-        }),
-        instance.toolbar.addButton({
+        instance.toolbar.registerItem('insertUnorderedList', {
           command: 'insertUnorderedList',
           label: 'Lista com marcadores (em breve)',
-          icon: createToolbarIcon('listUl'),
+          icon: () => createToolbarIcon('listUl'),
           disabled: true,
         }),
-        instance.toolbar.addButton({
+        instance.toolbar.registerItem('insertOrderedList', {
           command: 'insertOrderedList',
           label: 'Lista numerada (em breve)',
-          icon: createToolbarIcon('listOl'),
+          icon: () => createToolbarIcon('listOl'),
           disabled: true,
         }),
-        instance.toolbar.addButton({
-          command: 'formatBlock',
-          label: '',
-          separator: true,
-        }),
-        instance.toolbar.addButton({
+        instance.toolbar.registerItem('insertLink', {
           command: 'insertLink',
           label: 'Link',
-          icon: createToolbarIcon('link'),
+          icon: () => createToolbarIcon('link'),
         }),
-        instance.toolbar.addButton({
+        instance.toolbar.registerItem('insertImage', {
           command: 'insertImage',
           label: 'Imagem (em breve)',
-          icon: createToolbarIcon('image'),
+          icon: () => createToolbarIcon('image'),
           disabled: true,
         }),
-        instance.toolbar.addButton({
-          command: 'formatBlock',
-          label: '',
-          separator: true,
-        }),
-        instance.toolbar.addButton({
+        instance.toolbar.registerItem('toggleSource', {
           command: 'toggleSource',
           label: 'Código',
-          icon: createToolbarIcon('code'),
+          icon: () => createToolbarIcon('code'),
         }),
       );
     },
@@ -120,6 +106,19 @@ export function initDemo(root) {
     },
   };
 
+  editor.configure({
+    toolbar: [
+      ...DEFAULT_TOOLBAR,
+      '|',
+      'insertUnorderedList',
+      'insertOrderedList',
+      '|',
+      'insertLink',
+      'insertImage',
+      '|',
+      'toggleSource',
+    ],
+  });
   editor.use(pluginBasicFormats);
   editor.use(chromePlugin);
   editor.setContent(SAMPLE_HTML);

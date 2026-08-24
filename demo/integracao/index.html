@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" />
+  <title>Nexus — Integração</title>
+  <link rel="stylesheet" href="/assets/styles/tokens.css" />
+  <link rel="stylesheet" href="/demo/integracao/integracao.css" />
+</head>
+
+<body>
+  <header class="host-header">
+    <div class="host-header__brand">
+      <span class="host-name">CMS de exemplo</span>
+      <span class="host-header__divider" aria-hidden="true"></span>
+      <nav class="host-nav" aria-label="Demos">
+        <a href="/demo/">Playground</a>
+        <a href="/demo/integracao/" aria-current="page">Integração</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="host-main">
+    <article class="host-article">
+      <h1>Nova publicação</h1>
+      <p class="host-lead">
+        Esta página monta o Nexus como um host faria: config em
+        <code>nexus-config.js</code>, inicialização em
+        <code>init-editor.js</code>.
+      </p>
+
+      <div class="host-form">
+        <div class="host-field">
+          <label class="host-label" for="post-title">Título</label>
+          <input class="host-input" id="post-title" name="title" type="text" value="Integração do Nexus"
+            autocomplete="off" />
+        </div>
+
+        <div class="host-field">
+          <span class="host-label" id="post-body-label">Conteúdo</span>
+          <div data-editor-root></div>
+        </div>
+      </div>
+
+      <aside class="host-config" aria-label="Configuração desta página">
+        <h2>Configuração</h2>
+        <dl>
+          <div>
+            <dt>height</dt>
+            <dd>400</dd>
+          </div>
+          <div>
+            <dt>toolbar</dt>
+            <dd>undo redo | formatBlock | bold italic</dd>
+          </div>
+        </dl>
+        <p>O sublinhado fica de fora de propósito. <kbd>Ctrl+B</kbd> e <kbd>Ctrl+I</kbd> continuam ativos.</p>
+      </aside>
+    </article>
+  </main>
+
+  <script type="module" src="/demo/integracao/init-editor.js"></script>
+</body>
+
+</html>
