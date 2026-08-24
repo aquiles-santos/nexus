@@ -3,7 +3,9 @@ import { DEFAULT_TOOLBAR } from '/src/editor/editor-config.js';
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
 import { pluginLists } from '/src/plugins/lists/index.js';
 import { pluginLink } from '/src/plugins/link/index.js';
-import { createToolbarIcon } from '/src/ui/icons/icons.js';
+import { pluginMedia } from '/src/plugins/media/index.js';
+import { pluginPasteClean } from '/src/plugins/paste-clean/index.js';
+import { pluginSourceCode } from '/src/plugins/source-code/index.js';
 
 const SAMPLE_HTML = `
 <h1>The Architecture of Modern Content Systems</h1>
@@ -31,54 +33,17 @@ export function initDemo(root) {
   const charCount = root.querySelector('[data-char-count]');
   const saveStatus = root.querySelector('[data-save-status]');
   const viewButtons = [...root.querySelectorAll('[data-view]')];
-  const sourceInput = root.querySelector('[data-source-input]');
 
   if (
     !(editor instanceof HTMLElement) ||
     !wordCount ||
     !charCount ||
-    !saveStatus ||
-    !sourceInput
+    !saveStatus
   ) {
     return () => {};
   }
 
   let saveTimer = null;
-  /** @type {(() => void)[]} */
-  const chromeTeardowns = [];
-
-  const chromePlugin = {
-    name: 'host-chrome',
-    init(instance) {
-      chromeTeardowns.push(
-        instance.toolbar.registerItem('insertImage', {
-          command: 'insertImage',
-          label: 'Imagem (em breve)',
-          icon: () => createToolbarIcon('image'),
-          disabled: true,
-        }),
-        instance.toolbar.registerItem('toggleSource', {
-          command: 'toggleSource',
-          label: 'Código',
-          icon: () => createToolbarIcon('code'),
-        }),
-      );
-    },
-    commands: {
-      toggleSource() {
-        setView(
-          editor.getAttribute('data-mode') === 'source' ? 'visual' : 'source',
-        );
-      },
-    },
-    shortcuts: {},
-    destroy() {
-      for (const teardown of chromeTeardowns) {
-        teardown();
-      }
-      chromeTeardowns.length = 0;
-    },
-  };
 
   editor.configure({
     toolbar: [
@@ -96,7 +61,9 @@ export function initDemo(root) {
   editor.use(pluginBasicFormats);
   editor.use(pluginLists);
   editor.use(pluginLink);
-  editor.use(chromePlugin);
+  editor.use(pluginMedia);
+  editor.use(pluginPasteClean);
+  editor.use(pluginSourceCode);
   editor.setContent(SAMPLE_HTML);
   updateCounts();
   setView('visual');
@@ -139,31 +106,20 @@ export function initDemo(root) {
   }
 
   function setView(mode) {
-    if (mode === 'source') {
-      sourceInput.value = formatHtml(editor.getContent({ format: 'html' }));
-      editor.setAttribute('data-mode', 'source');
-    } else {
-      if (editor.getAttribute('data-mode') === 'source') {
-        editor.setContent(sourceInput.value);
-        updateCounts();
-      }
-      editor.removeAttribute('data-mode');
+    const isSource = mode === 'source';
+    if (isSource && editor.getAttribute('data-mode') !== 'source') {
+      editor.execCommand('toggleSource');
+    } else if (!isSource && editor.getAttribute('data-mode') === 'source') {
+      editor.execCommand('toggleSource');
+      updateCounts();
     }
 
-    const isSource = mode === 'source';
     for (const button of viewButtons) {
       button.setAttribute(
         'aria-pressed',
         String(button.getAttribute('data-view') === mode),
       );
     }
-
-    editor.toolbar.setPressed('toggleSource', isSource);
-    editor.toolbar.setLabel('toggleSource', isSource ? 'Visual' : 'Código');
-    editor.toolbar.setIcon(
-      'toggleSource',
-      createToolbarIcon(isSource ? 'eye' : 'code'),
-    );
   }
 
   return () => {
@@ -174,12 +130,7 @@ export function initDemo(root) {
     if (saveTimer) {
       clearTimeout(saveTimer);
     }
-    chromePlugin.destroy();
   };
-}
-
-function formatHtml(html) {
-  return html.replace(/></g, '>\n<').replace(/\n+/g, '\n').trim();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
