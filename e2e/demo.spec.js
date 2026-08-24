@@ -155,6 +155,23 @@ test('inserts a link from the modal', async ({ page }) => {
   await expect(content).toBeFocused()
 })
 
+test('inserts a link with Ctrl+K', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+  await page.keyboard.type('Shortcut link')
+  await page.keyboard.press('Control+a')
+  await page.keyboard.press('Control+k')
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('URL').fill('https://example.com/docs')
+  await dialog.getByRole('button', { name: 'Insert' }).click()
+
+  await expect(content.locator('a')).toHaveAttribute('href', 'https://example.com/docs')
+})
+
 test('shows an error when the link href is unsafe', async ({ page }) => {
   await page.goto('/demo/')
   await clearEditor(page)

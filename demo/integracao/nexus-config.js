@@ -14,5 +14,7 @@ export const editorConfig = {
     '|',
     'insertUnorderedList',
     'insertOrderedList',
+    '|',
+    'insertLink',
   ],
 };
