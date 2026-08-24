@@ -458,3 +458,24 @@ test('nests a numbered list inside a bullet list item', async ({ page }) => {
   await expect(content.locator('ul > li')).toHaveCount(2)
   await expect(content.locator('ol')).toHaveCount(1)
 })
+
+test('inserts an image from the file picker', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: 'Imagem' }).click(),
+  ])
+
+  await fileChooser.setFiles({
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  })
+
+  await expect(content.locator('img')).toHaveCount(1)
+})
