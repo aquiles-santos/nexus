@@ -29,6 +29,8 @@ test('integration demo mounts a configured editor', async ({ page }) => {
     '|',
     'insertUnorderedList',
     'insertOrderedList',
+    '|',
+    'insertLink',
   ])
 
   await expect(page.getByRole('button', { name: 'Negrito' })).toBeVisible()
