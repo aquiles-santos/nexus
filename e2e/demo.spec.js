@@ -202,6 +202,49 @@ test('code view shows document source', async ({ page }) => {
   await expect(page.locator('nexus-editor [data-nexus-content]')).toBeHidden()
 })
 
+test('round-trips source mode edits', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  const source = page.locator('[data-source-input]')
+
+  await page.getByRole('button', { name: 'Code' }).click()
+  await source.fill('<p>Edited in source</p>')
+  await page.getByRole('button', { name: 'Visual', exact: true }).click()
+
+  await expect(content.locator('p')).toHaveText('Edited in source')
+})
+
+test('cleans Word-like paste content', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+
+  await page.evaluate(async () => {
+    const editor = document.querySelector('nexus-editor')
+    const target = editor?.contentElement
+    if (!target) {
+      return
+    }
+
+    const data = new DataTransfer()
+    data.setData('text/html', '<p><b>Bold</b><span style="color:red"> text</span></p>')
+    target.dispatchEvent(
+      new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: data,
+      }),
+    )
+  })
+
+  await expect(content.locator('strong')).toHaveText('Bold')
+  await expect(content.locator('span')).toHaveCount(0)
+})
+
 test('toolbar stays visible when document content grows', async ({ page }) => {
   await page.goto('/demo/')
 

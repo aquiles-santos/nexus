@@ -460,6 +460,9 @@ class NexusEditorElement extends HTMLElement {
       if (command === 'insertLink') {
         return isInsideLink;
       }
+      if (command === 'toggleSource') {
+        return this.getAttribute('data-mode') === 'source';
+      }
       return formatter.isActive(command);
     });
     this._updateHistoryButtons();
@@ -477,6 +480,19 @@ class NexusEditorElement extends HTMLElement {
    */
   getContent(options = {}) {
     const { format = 'html' } = options;
+
+    if (this.getAttribute('data-mode') === 'source') {
+      const sourceInput = this.querySelector('[data-source-input]');
+      if (sourceInput instanceof HTMLTextAreaElement) {
+        const html = sanitizeHtml(sourceInput.value);
+        if (format === 'ast') {
+          const template = document.createElement('template');
+          template.innerHTML = html;
+          return serializeAst(template.content);
+        }
+        return html;
+      }
+    }
 
     if (format === 'ast') {
       return serializeAst(this._content);
@@ -548,7 +564,15 @@ class NexusEditorElement extends HTMLElement {
     } finally {
       this._isExecutingCommand = false;
       if (!this._modal.dialog.open) {
-        this._content.focus({ preventScroll: true });
+        const sourceInput = this.querySelector('[data-source-input]');
+        if (
+          this.getAttribute('data-mode') === 'source'
+          && sourceInput instanceof HTMLTextAreaElement
+        ) {
+          sourceInput.focus({ preventScroll: true });
+        } else {
+          this._content.focus({ preventScroll: true });
+        }
       }
     }
   }

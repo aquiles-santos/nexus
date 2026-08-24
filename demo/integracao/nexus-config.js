@@ -17,5 +17,7 @@ export const editorConfig = {
     '|',
     'insertLink',
     'insertImage',
+    '|',
+    'toggleSource',
   ],
 };
