@@ -1,6 +1,7 @@
 import { createNexusEditor } from '/src/editor/nexus-editor.js';
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
 import { pluginLists } from '/src/plugins/lists/index.js';
+import { pluginLink } from '/src/plugins/link/index.js';
 import { editorConfig } from './nexus-config.js';
 
 const INITIAL_HTML =
@@ -24,6 +25,7 @@ export function initEditor(root) {
 
   editor.use(pluginBasicFormats);
   editor.use(pluginLists);
+  editor.use(pluginLink);
   editor.setContent(INITIAL_HTML);
   mount.appendChild(editor);
 
