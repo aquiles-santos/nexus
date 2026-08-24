@@ -151,10 +151,35 @@ describe('nexus-editor', () => {
     expect(editor.getContent({ format: 'html' })).toBe('<p>Hello</p>')
   })
 
+  it('returns ast when requested', () => {
+    const editor = mountEditor()
+
+    editor.setContent('<p>Hello <strong>world</strong></p>')
+    expect(editor.getContent({ format: 'ast' })).toEqual({
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tag: 'p',
+          attrs: {},
+          children: [
+            { type: 'text', value: 'Hello ' },
+            {
+              type: 'element',
+              tag: 'strong',
+              attrs: {},
+              children: [{ type: 'text', value: 'world' }],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
   it('throws for unsupported content format', () => {
     const editor = mountEditor()
 
-    expect(() => editor.getContent({ format: 'ast' })).toThrow('not supported')
+    expect(() => editor.getContent({ format: 'markdown' })).toThrow('not supported')
   })
 
   it('execCommand applies bold formatting', () => {
@@ -202,6 +227,24 @@ describe('nexus-editor', () => {
     const editor = mountEditor()
     editor.setContent('<p><img src="/img.png" alt="foto"></p>')
     expect(editor.contentElement.hasAttribute('data-empty')).toBe(false)
+  })
+
+  it('restores the empty placeholder after undoing image-only content', () => {
+    const editor = mountEditor()
+    editor.setContent('<p><img src="/img.png" alt="foto"></p>')
+
+    editor.execCommand('undo')
+
+    expect(editor.contentElement.querySelector('img')).toBeNull()
+    expect(editor.contentElement.hasAttribute('data-empty')).toBe(true)
+  })
+
+  it('exposes selection and host helpers for plugins', () => {
+    const editor = mountEditor()
+
+    expect(editor.selection).toBeDefined()
+    editor.recordUndo()
+    editor.updateToolbarState()
   })
 
   it('sanitizes pasted html', () => {
