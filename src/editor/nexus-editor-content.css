@@ -148,8 +148,35 @@ nexus-editor [data-nexus-content] a {
 
 nexus-editor [data-nexus-source] {
   display: none;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 46rem;
+  min-width: 0;
   margin: 0 auto;
+  flex: 1 0 auto;
+}
+
+nexus-editor .nexus-source-input,
+nexus-editor .source-window__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 28rem;
+  padding: var(--space-lg);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+nexus-editor .nexus-source-input:focus-visible,
+nexus-editor .source-window__input:focus-visible {
+  outline: none;
+  border-color: var(--color-focus-ring);
 }
 
 nexus-editor[data-mode='source'] [data-nexus-content] {
