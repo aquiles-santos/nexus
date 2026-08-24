@@ -16,5 +16,8 @@ export const editorConfig = {
     'insertOrderedList',
     '|',
     'insertLink',
+    'insertImage',
+    '|',
+    'toggleSource',
   ],
 };

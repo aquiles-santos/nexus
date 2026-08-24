@@ -202,6 +202,49 @@ test('code view shows document source', async ({ page }) => {
   await expect(page.locator('nexus-editor [data-nexus-content]')).toBeHidden()
 })
 
+test('round-trips source mode edits', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  const source = page.locator('[data-source-input]')
+
+  await page.getByRole('button', { name: 'Code' }).click()
+  await source.fill('<p>Edited in source</p>')
+  await page.getByRole('button', { name: 'Visual', exact: true }).click()
+
+  await expect(content.locator('p')).toHaveText('Edited in source')
+})
+
+test('cleans Word-like paste content', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+
+  await page.evaluate(async () => {
+    const editor = document.querySelector('nexus-editor')
+    const target = editor?.contentElement
+    if (!target) {
+      return
+    }
+
+    const data = new DataTransfer()
+    data.setData('text/html', '<p><b>Bold</b><span style="color:red"> text</span></p>')
+    target.dispatchEvent(
+      new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: data,
+      }),
+    )
+  })
+
+  await expect(content.locator('strong')).toHaveText('Bold')
+  await expect(content.locator('span')).toHaveCount(0)
+})
+
 test('toolbar stays visible when document content grows', async ({ page }) => {
   await page.goto('/demo/')
 
@@ -464,4 +507,25 @@ test('nests a numbered list inside a bullet list item', async ({ page }) => {
   await expect(content.locator('ul > li > ol > li')).toHaveText('Subitem')
   await expect(content.locator('ul > li')).toHaveCount(2)
   await expect(content.locator('ol')).toHaveCount(1)
+})
+
+test('inserts an image from the file picker', async ({ page }) => {
+  await page.goto('/demo/')
+  await clearEditor(page)
+
+  const content = page.locator('nexus-editor [data-nexus-content]')
+  await content.click()
+
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: 'Imagem' }).click(),
+  ])
+
+  await fileChooser.setFiles({
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  })
+
+  await expect(content.locator('img')).toHaveCount(1)
 })
