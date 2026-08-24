@@ -64,7 +64,7 @@ export const editorConfig = {
 | `undo`, `redo` | core do editor | Sempre registrados ao conectar |
 | `formatBlock` | plugin `basic-formats` | Menu Parágrafo / H1–H3 / Citação |
 | `bold`, `italic`, `underline` | plugin `basic-formats` | |
-| `insertUnorderedList`, `insertOrderedList` | plugin da página hospedeira | Na demo ainda estão desabilitados |
+| `insertUnorderedList`, `insertOrderedList` | plugin `lists` | Tab / Shift+Tab dentro de listas |
 | `insertLink`, `insertImage` | plugin da página hospedeira | `insertImage` ainda desabilitado na demo |
 | `toggleSource` | plugin da página hospedeira | Alterna visual / código |
 
@@ -99,6 +99,7 @@ export const editorConfig = {
 ```javascript
 import { createNexusEditor } from '/src/editor/nexus-editor.js'
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js'
+import { pluginLists } from '/src/plugins/lists/index.js'
 import { editorConfig } from './nexus-config.js'
 
 function initEditor(root) {
@@ -111,6 +112,7 @@ function initEditor(root) {
   editor.setAttribute('aria-labelledby', 'post-body-label')
 
   editor.use(pluginBasicFormats)
+  editor.use(pluginLists)
   editor.setContent('<p>Comece a escrever…</p>')
   mount.appendChild(editor)
 
@@ -140,6 +142,7 @@ Se o custom element já está na página (como na demo):
 ```javascript
 import '/src/editor/nexus-editor.js'
 import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js'
+import { pluginLists } from '/src/plugins/lists/index.js'
 import { editorConfig } from './nexus-config.js'
 
 function initEditor(root) {
@@ -150,6 +153,7 @@ function initEditor(root) {
 
   editor.configure(editorConfig)
   editor.use(pluginBasicFormats)
+  editor.use(pluginLists)
   editor.setContent('<p>Comece a escrever…</p>')
 
   return () => editor.destroy()
