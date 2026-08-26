@@ -1,5 +1,7 @@
 import { isAllowedTag, isBlock, getDefaultBlockTag, getInlineTag } from './schema.js';
 
+const LIST_ITEM_FLOW_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'blockquote']);
+
 /**
  * @param {HTMLElement} root
  * @param {ReturnType<import('./selection.js').createSelectionManager>} selection
@@ -42,32 +44,6 @@ export function createFormatter(root, selection) {
         return /** @type {HTMLElement} */ (node);
       }
       node = node.parentNode;
-    }
-
-    return null;
-  }
-
-  function findInlineInRange(tag, range) {
-    const fromStart = findAncestorInlineFromNode(tag, range.startContainer);
-    if (fromStart) {
-      return fromStart;
-    }
-
-    const fromEnd = findAncestorInlineFromNode(tag, range.endContainer);
-    if (fromEnd) {
-      return fromEnd;
-    }
-
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    let node = walker.nextNode();
-
-    while (node) {
-      if (node.nodeType === Node.ELEMENT_NODE
-        && node.tagName.toLowerCase() === tag
-        && range.intersectsNode(node)) {
-        return /** @type {HTMLElement} */ (node);
-      }
-      node = walker.nextNode();
     }
 
     return null;
@@ -320,6 +296,42 @@ export function createFormatter(root, selection) {
     selection.setRange(newRange);
   }
 
+  function isTextSliceMarked(tag, textNode, from, to) {
+    if (from >= to) {
+      return true;
+    }
+
+    return Boolean(findAncestorInlineFromNode(tag, textNode));
+  }
+
+  function isFullyMarked(tag, range) {
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+    const endContainer = range.endContainer;
+    const endOffset = range.endOffset;
+
+    for (const textNode of collectTextNodesInRange(range)) {
+      let from = 0;
+      let to = textNode.length;
+
+      if (textNode === startContainer) {
+        from = startOffset;
+      }
+      if (textNode === endContainer) {
+        to = endOffset;
+      }
+      if (from >= to) {
+        continue;
+      }
+
+      if (!isTextSliceMarked(tag, textNode, from, to)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   function toggleInline(tag) {
     const range = selection.getRange();
     if (!range) {
@@ -341,14 +353,54 @@ export function createFormatter(root, selection) {
       return;
     }
 
-    const existing = findInlineInRange(tag, range);
-    if (existing) {
+    if (isFullyMarked(tag, range)) {
       removeInlineTagsFromRange(tag, range);
       pendingMarks.delete(tag);
       return;
     }
 
-    wrapRangeWithTag(range, tag);
+    removeInlineTagsFromRange(tag, range);
+    const refreshedRange = selection.getRange();
+    if (refreshedRange) {
+      wrapRangeWithTag(refreshedRange, tag);
+    }
+  }
+
+  /**
+   * @param {HTMLElement} listItem
+   * @returns {HTMLElement}
+   */
+  function resolveListItemFlowBlock(listItem) {
+    for (const child of listItem.children) {
+      if (child instanceof HTMLElement && LIST_ITEM_FLOW_TAGS.has(child.tagName.toLowerCase())) {
+        return child;
+      }
+    }
+
+    const flowBlock = document.createElement(getDefaultBlockTag());
+    let hasFlowContent = false;
+
+    while (listItem.firstChild) {
+      const node = listItem.firstChild;
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const tag = /** @type {HTMLElement} */ (node).tagName.toLowerCase();
+        if (tag === 'ul' || tag === 'ol' || LIST_ITEM_FLOW_TAGS.has(tag)) {
+          break;
+        }
+      }
+
+      flowBlock.appendChild(node);
+      hasFlowContent = true;
+    }
+
+    if (!hasFlowContent) {
+      flowBlock.appendChild(document.createElement('br'));
+      listItem.insertBefore(flowBlock, listItem.firstChild);
+      return flowBlock;
+    }
+
+    listItem.insertBefore(flowBlock, listItem.firstChild);
+    return flowBlock;
   }
 
   function formatBlock(blockTag) {
@@ -356,9 +408,13 @@ export function createFormatter(root, selection) {
       return;
     }
 
-    const block = findAncestorBlock();
+    let block = findAncestorBlock();
     if (!block) {
       return;
+    }
+
+    if (block.tagName.toLowerCase() === 'li') {
+      block = resolveListItemFlowBlock(block);
     }
 
     const currentTag = block.tagName.toLowerCase();
@@ -398,7 +454,20 @@ export function createFormatter(root, selection) {
 
   function getActiveBlockTag() {
     const block = findAncestorBlock();
-    return block ? block.tagName.toLowerCase() : null;
+    if (!block) {
+      return null;
+    }
+
+    if (block.tagName.toLowerCase() === 'li') {
+      for (const child of block.children) {
+        if (child instanceof HTMLElement && LIST_ITEM_FLOW_TAGS.has(child.tagName.toLowerCase())) {
+          return child.tagName.toLowerCase();
+        }
+      }
+      return getDefaultBlockTag();
+    }
+
+    return block.tagName.toLowerCase();
   }
 
   function isActive(command) {
@@ -412,11 +481,14 @@ export function createFormatter(root, selection) {
       return false;
     }
 
-    if (selection.isWithin(tag)) {
-      return true;
+    if (range.collapsed) {
+      if (selection.isWithin(tag)) {
+        return true;
+      }
+      return pendingMarks.has(tag);
     }
 
-    return Boolean(range.collapsed && pendingMarks.has(tag));
+    return isFullyMarked(tag, range);
   }
 
   return {

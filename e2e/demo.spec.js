@@ -291,18 +291,18 @@ test('focus border stays inside the scroller when content overflows', async ({ p
   const edgesVisibleAtTop = await scroller.evaluate((element) => {
     element.scrollTop = 0
 
-    const content = element.querySelector('[data-nexus-content]')
-    if (!content) {
+    const frame = element.querySelector('[data-nexus-content-frame]')
+    if (!frame) {
       return false
     }
 
     const scrollerRect = element.getBoundingClientRect()
-    const contentRect = content.getBoundingClientRect()
+    const frameRect = frame.getBoundingClientRect()
     const paddingTop = Number.parseFloat(getComputedStyle(element).paddingTop)
-    const borderColor = getComputedStyle(content).borderTopColor
+    const borderColor = getComputedStyle(frame).borderTopColor
 
     return (
-      contentRect.top >= scrollerRect.top + paddingTop - 1
+      frameRect.top >= scrollerRect.top + paddingTop - 1
       && borderColor !== 'rgba(0, 0, 0, 0)'
       && borderColor !== 'transparent'
     )
@@ -311,18 +311,18 @@ test('focus border stays inside the scroller when content overflows', async ({ p
   const edgesVisibleAtBottom = await scroller.evaluate((element) => {
     element.scrollTop = element.scrollHeight - element.clientHeight
 
-    const content = element.querySelector('[data-nexus-content]')
-    if (!content) {
+    const frame = element.querySelector('[data-nexus-content-frame]')
+    if (!frame) {
       return false
     }
 
     const scrollerRect = element.getBoundingClientRect()
-    const contentRect = content.getBoundingClientRect()
+    const frameRect = frame.getBoundingClientRect()
     const paddingBottom = Number.parseFloat(getComputedStyle(element).paddingBottom)
-    const borderColor = getComputedStyle(content).borderBottomColor
+    const borderColor = getComputedStyle(frame).borderBottomColor
 
     return (
-      contentRect.bottom <= scrollerRect.bottom - paddingBottom + 1
+      frameRect.bottom <= scrollerRect.bottom - paddingBottom + 1
       && borderColor !== 'rgba(0, 0, 0, 0)'
       && borderColor !== 'transparent'
     )

@@ -121,7 +121,7 @@ describe('formatter', () => {
     expect(formatter.isActive('italic')).toBe(false)
   })
 
-  it('unwraps inline style when selection spans mixed content', () => {
+  it('applies inline style to entire mixed selection', () => {
     root.innerHTML = '<p><em>Hello</em> world</p>'
     const selection = createSelectionManager(root)
     const formatter = createFormatter(root, selection)
@@ -133,6 +133,25 @@ describe('formatter', () => {
     window.getSelection().removeAllRanges()
     window.getSelection().addRange(range)
 
+    formatter.toggleInline('em')
+
+    expect(root.querySelector('em')?.textContent).toBe('Hello world')
+    expect(formatter.isActive('italic')).toBe(true)
+  })
+
+  it('unwraps inline style when the entire selection is already styled', () => {
+    root.innerHTML = '<p><em>Hello</em> world</p>'
+    const selection = createSelectionManager(root)
+    const formatter = createFormatter(root, selection)
+    const paragraph = root.querySelector('p')
+
+    const range = document.createRange()
+    range.setStart(paragraph, 0)
+    range.setEnd(paragraph, paragraph.childNodes.length)
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(range)
+
+    formatter.toggleInline('em')
     formatter.toggleInline('em')
 
     expect(root.querySelector('em')).toBeNull()
@@ -231,5 +250,57 @@ describe('formatter', () => {
     expect(root.innerHTML).toBe(
       '<ul><li><strong>Item 1</strong></li><li><strong>Item 2</strong></li></ul>',
     )
+  })
+
+  it('reports the default block tag inside a list item without a flow wrapper', () => {
+    root.innerHTML = '<ul><li>Title</li></ul>';
+    const selection = createSelectionManager(root);
+    const formatter = createFormatter(root, selection);
+    const textNode = root.querySelector('li').firstChild;
+
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.collapse(true);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+
+    expect(formatter.getActiveBlockTag()).toBe('p');
+  });
+
+  it('formats list item text as heading while preserving nested lists', () => {
+    root.innerHTML = '<ul><li>Title<ul><li>Nested</li></ul></li></ul>';
+    const selection = createSelectionManager(root);
+    const formatter = createFormatter(root, selection);
+    const titleText = root.querySelector('li').firstChild;
+
+    const range = document.createRange();
+    range.setStart(titleText, 0);
+    range.collapse(true);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+
+    formatter.formatBlock('h1');
+
+    expect(root.innerHTML).toBe(
+      '<ul><li><h1>Title</h1><ul><li>Nested</li></ul></li></ul>',
+    );
+  });
+
+  it('formats a list item as a heading without breaking list structure', () => {
+    root.innerHTML = '<ul><li>Title</li><li>Body</li></ul>'
+    const selection = createSelectionManager(root)
+    const formatter = createFormatter(root, selection)
+    const firstItemText = root.querySelector('li').firstChild
+
+    const range = document.createRange()
+    range.setStart(firstItemText, 0)
+    range.collapse(true)
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(range)
+
+    formatter.formatBlock('h1')
+
+    expect(root.innerHTML).toBe('<ul><li><h1>Title</h1></li><li>Body</li></ul>')
+    expect(root.querySelectorAll('ul > li')).toHaveLength(2)
   })
 })
