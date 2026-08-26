@@ -3,6 +3,7 @@ import {
   ALLOWED_IMAGE_TYPES,
   createLocalStorageAdapter,
 } from '../../data/storage-adapter.js';
+import { ensureEditableStructure, insertImageWithStructure } from '../../core/content-structure.js';
 import { createToolbarIcon } from '../../ui/icons/icons.js';
 
 /** @type {Map<object, { teardowns: (() => void)[], selectedImage: HTMLImageElement | null, overlay: HTMLElement | null, fileInput: HTMLInputElement | null, adapter: ReturnType<typeof createLocalStorageAdapter>, uploadedUrls: Set<string> }>} */
@@ -79,6 +80,14 @@ export function createPluginMedia(adapter) {
       handle.setAttribute('aria-valuemin', '40');
       overlay.appendChild(handle);
 
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'nexus-image-resize__delete';
+      deleteButton.setAttribute('aria-label', 'Remover imagem');
+      deleteButton.setAttribute('data-delete-image', '');
+      deleteButton.appendChild(createToolbarIcon('trash'));
+      overlay.appendChild(deleteButton);
+
       function deselectImage() {
         state.selectedImage = null;
         overlay.hidden = true;
@@ -105,6 +114,38 @@ export function createPluginMedia(adapter) {
         image.setAttribute('data-selected', '');
         positionOverlay(image);
       }
+
+      function deleteSelectedImage() {
+        const image = state.selectedImage;
+        if (!image) {
+          return;
+        }
+
+        const imageUrl = image.getAttribute('src');
+        editor.recordUndo();
+        image.remove();
+        if (imageUrl) {
+          state.uploadedUrls.delete(imageUrl);
+          state.adapter.remove?.(imageUrl);
+        }
+        deselectImage();
+        ensureEditableStructure(content, editor.selection);
+        content.focus({ preventScroll: true });
+        editor.recordUndo();
+        content.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      }
+
+      const handleDeleteClick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteSelectedImage();
+      };
+
+      const handleScrollerReposition = () => {
+        if (state.selectedImage) {
+          positionOverlay(state.selectedImage);
+        }
+      };
 
       const handleContentClick = (event) => {
         const target = /** @type {HTMLElement} */ (event.target);
@@ -139,10 +180,11 @@ export function createPluginMedia(adapter) {
       };
 
       function getContentInnerWidth() {
-        const styles = getComputedStyle(content);
+        const frame = editor.contentFrameElement;
+        const styles = getComputedStyle(frame);
         const horizontalPadding =
           Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight);
-        return Math.max(40, Math.floor(content.clientWidth - horizontalPadding));
+        return Math.max(40, Math.floor(frame.clientWidth - horizontalPadding));
       }
 
       const handlePointerMove = (event) => {
@@ -217,10 +259,7 @@ export function createPluginMedia(adapter) {
         const image = document.createElement('img');
         image.src = url;
         image.alt = alt;
-        insertRange.insertNode(image);
-        insertRange.setStartAfter(image);
-        insertRange.collapse(true);
-        selection?.setRange(insertRange);
+        insertImageWithStructure(image, insertRange, content, selection);
         editor.recordUndo();
         content.dispatchEvent(new InputEvent('input', { bubbles: true }));
         image.addEventListener(
@@ -313,6 +352,8 @@ export function createPluginMedia(adapter) {
       handle.addEventListener('pointerdown', handlePointerDown);
       handle.addEventListener('pointermove', handlePointerMove);
       handle.addEventListener('pointerup', handlePointerUp);
+      deleteButton.addEventListener('click', handleDeleteClick);
+      scroller.addEventListener('scroll', handleScrollerReposition, { passive: true });
       fileInput.addEventListener('change', handleFileChange);
 
       state.teardowns.push(
@@ -323,6 +364,8 @@ export function createPluginMedia(adapter) {
         () => handle.removeEventListener('pointerdown', handlePointerDown),
         () => handle.removeEventListener('pointermove', handlePointerMove),
         () => handle.removeEventListener('pointerup', handlePointerUp),
+        () => deleteButton.removeEventListener('click', handleDeleteClick),
+        () => scroller.removeEventListener('scroll', handleScrollerReposition),
         () => fileInput.removeEventListener('change', handleFileChange),
         editor.toolbar.registerItem('insertImage', {
           command: 'insertImage',

@@ -3,6 +3,7 @@ import { serializeHtml } from '../data/html-serializer.js';
 import { parseHtml } from '../data/html-parser.js';
 import { sanitizeHtml } from '../data/sanitizer.js';
 import { getActiveListType, findAncestorAnchor } from '../core/content-queries.js';
+import { ensureEditableStructure } from '../core/content-structure.js';
 import { createSelectionManager } from '../core/selection.js';
 import { createCommands } from '../core/commands.js';
 import { createUndoManager } from '../core/undo-manager.js';
@@ -17,6 +18,7 @@ import '../ui/modal/nexus-modal.js';
 const TAG_NAME = 'nexus-editor';
 const INITIAL_CONTENT = '<p><br></p>';
 const CONTENT_STYLES_ATTR = 'data-nexus-content-styles';
+const STRUCTURAL_CONTENT_SELECTOR = 'ul, ol, blockquote, a, img, h1, h2, h3';
 
 function ensureContentStyles() {
   if (document.head.querySelector(`link[${CONTENT_STYLES_ATTR}]`)) {
@@ -68,6 +70,10 @@ class NexusEditorElement extends HTMLElement {
     this._scroller.setAttribute('data-nexus-scroller', '');
     this._scroller.part = 'scroller';
 
+    this._contentFrame = document.createElement('div');
+    this._contentFrame.setAttribute('data-nexus-content-frame', '');
+    this._contentFrame.part = 'content-frame';
+
     this._content = document.createElement('div');
     this._content.setAttribute('data-nexus-content', '');
     this._content.setAttribute('contenteditable', 'true');
@@ -118,6 +124,7 @@ class NexusEditorElement extends HTMLElement {
       this._content.innerHTML = INITIAL_CONTENT;
     }
     this._checkEmpty();
+    this._syncPlaceholder();
 
     this._selection = createSelectionManager(this._content);
     this._commands = createCommands(this._content, this._selection);
@@ -142,9 +149,12 @@ class NexusEditorElement extends HTMLElement {
     this._content.addEventListener('keydown', this._handleKeyDown);
     this._content.addEventListener('mouseup', this._handleCaretMove);
     this._content.addEventListener('keyup', this._handleCaretMove);
+    this._content.addEventListener('focus', this._handleContentFocus);
+    this._content.addEventListener('blur', this._handleContentBlur);
     this._content.addEventListener('paste', this._handlePaste);
     this._content.addEventListener('drop', this._handleDrop);
     this._content.addEventListener('nexus:restore-bookmark', this._handleRestoreBookmark);
+    this._scroller.addEventListener('mousedown', this._handleScrollerMouseDown);
     document.addEventListener('selectionchange', this._handleSelectionChange);
 
     for (const plugin of this._plugins) {
@@ -166,8 +176,12 @@ class NexusEditorElement extends HTMLElement {
       this.appendChild(this._scroller);
     }
 
-    if (!this._scroller.contains(this._content)) {
-      this._scroller.appendChild(this._content);
+    if (!this._scroller.contains(this._contentFrame)) {
+      this._scroller.appendChild(this._contentFrame);
+    }
+
+    if (!this._contentFrame.contains(this._content)) {
+      this._contentFrame.appendChild(this._content);
     }
   }
 
@@ -181,9 +195,12 @@ class NexusEditorElement extends HTMLElement {
     this._content.removeEventListener('keydown', this._handleKeyDown);
     this._content.removeEventListener('mouseup', this._handleCaretMove);
     this._content.removeEventListener('keyup', this._handleCaretMove);
+    this._content.removeEventListener('focus', this._handleContentFocus);
+    this._content.removeEventListener('blur', this._handleContentBlur);
     this._content.removeEventListener('paste', this._handlePaste);
     this._content.removeEventListener('drop', this._handleDrop);
     this._content.removeEventListener('nexus:restore-bookmark', this._handleRestoreBookmark);
+    this._scroller.removeEventListener('mousedown', this._handleScrollerMouseDown);
     document.removeEventListener('selectionchange', this._handleSelectionChange);
     this._toolbar.removeEventListener('nexus:toolbar-pointerdown', this._handleToolbarPointerDown);
     this._toolbar.removeEventListener('nexus:toolbar-tooltip-show', this._handleToolbarTooltipShow);
@@ -266,11 +283,26 @@ class NexusEditorElement extends HTMLElement {
     this._config = resolveEditorConfig({
       height: input.height !== undefined ? input.height : this._config.height,
       toolbar: input.toolbar !== undefined ? input.toolbar : this._config.toolbar,
+      placeholder:
+        input.placeholder !== undefined ? input.placeholder : this._config.placeholder,
     });
     this._applyHeight();
+    this._syncPlaceholder();
     if (this._initialized) {
       this._syncToolbar();
     }
+  }
+
+  _syncPlaceholder() {
+    const { placeholder } = this._config;
+    if (placeholder) {
+      this._content.setAttribute('data-placeholder', placeholder);
+      this._content.setAttribute('aria-placeholder', placeholder);
+    } else {
+      this._content.removeAttribute('data-placeholder');
+      this._content.removeAttribute('aria-placeholder');
+    }
+    this._checkEmpty();
   }
 
   _updateHistoryButtons() {
@@ -291,6 +323,7 @@ class NexusEditorElement extends HTMLElement {
   };
 
   _handleInput = () => {
+    ensureEditableStructure(this._content, this._selection);
     this._checkEmpty();
     this._undo?.recordInput();
     this._updateToolbarState();
@@ -417,8 +450,31 @@ class NexusEditorElement extends HTMLElement {
   };
 
   _handleCaretMove = () => {
+    if (!this._content.contains(document.activeElement)) {
+      return;
+    }
     this._commands?.formatter.clearPendingMarks();
     this._updateToolbarState();
+  };
+
+  _handleContentFocus = () => {
+    this._contentFrame.setAttribute('data-focused', '');
+  };
+
+  _handleContentBlur = () => {
+    this._contentFrame.removeAttribute('data-focused');
+  };
+
+  _handleScrollerMouseDown = (event) => {
+    const target = /** @type {Node} */ (event.target);
+    if (target !== this._scroller && target !== this._contentFrame) {
+      return;
+    }
+
+    event.preventDefault();
+    if (document.activeElement === this._content) {
+      this._content.blur();
+    }
   };
 
   _handleSelectionChange = () => {
@@ -426,7 +482,7 @@ class NexusEditorElement extends HTMLElement {
       return;
     }
 
-    if (!this._content.contains(document.activeElement) && !this._content.contains(this._selection?.getRange()?.commonAncestorContainer ?? null)) {
+    if (!this._content.contains(document.activeElement)) {
       return;
     }
     this._updateToolbarState();
@@ -470,8 +526,12 @@ class NexusEditorElement extends HTMLElement {
 
   _checkEmpty() {
     const hasText = this._content.textContent.trim() !== '';
-    const hasMedia = Boolean(this._content.querySelector('img'));
-    this._content.toggleAttribute('data-empty', !hasText && !hasMedia);
+    const hasStructure = Boolean(
+      this._content.querySelector(STRUCTURAL_CONTENT_SELECTOR),
+    );
+    const isEmpty = !hasText && !hasStructure;
+    const showPlaceholder = Boolean(this._config.placeholder) && isEmpty;
+    this._content.toggleAttribute('data-empty', showPlaceholder);
   }
 
   /**
@@ -549,6 +609,7 @@ class NexusEditorElement extends HTMLElement {
       const pluginHandled = this._registry?.execCommand(name, ...args);
       if (pluginHandled) {
         this._undo?.record();
+        this._checkEmpty();
         this._updateToolbarState();
         return true;
       }
@@ -556,6 +617,7 @@ class NexusEditorElement extends HTMLElement {
       const coreHandled = this._commands?.exec(name, ...args);
       if (coreHandled) {
         this._undo?.record();
+        this._checkEmpty();
         this._updateToolbarState();
         return true;
       }
@@ -603,6 +665,10 @@ class NexusEditorElement extends HTMLElement {
     return this._modal;
   }
 
+  get contentFrameElement() {
+    return this._contentFrame;
+  }
+
   get contentElement() {
     return this._content;
   }
@@ -635,6 +701,7 @@ class NexusEditorElement extends HTMLElement {
     return {
       height: this._config.height,
       toolbar: [...this._config.toolbar],
+      placeholder: this._config.placeholder,
     };
   }
 
@@ -673,6 +740,7 @@ export function createNexusEditor(config) {
 export { NexusEditorElement, TAG_NAME };
 export {
   DEFAULT_EDITOR_HEIGHT,
+  DEFAULT_PLACEHOLDER,
   DEFAULT_TOOLBAR,
   TOOLBAR_SEPARATOR,
 } from './editor-config.js';

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createNexusEditor, TAG_NAME, DEFAULT_EDITOR_HEIGHT, DEFAULT_TOOLBAR } from './nexus-editor.js'
 import { pluginBasicFormats } from '../plugins/basic-formats/index.js'
+import { pluginLists } from '../plugins/lists/index.js'
 
 describe('nexus-editor', () => {
   beforeEach(() => {
@@ -229,6 +230,86 @@ describe('nexus-editor', () => {
     expect(editor.contentElement.hasAttribute('data-empty')).toBe(false)
   })
 
+  it('hides placeholder after creating a list without text', () => {
+    const editor = mountEditor()
+    editor.use(pluginBasicFormats)
+    editor.use(pluginLists)
+
+    editor.contentElement.focus()
+    editor.execCommand('insertUnorderedList')
+
+    expect(editor.contentElement.hasAttribute('data-empty')).toBe(false)
+  })
+
+  it('supports disabling the placeholder via config', () => {
+    const { element: editor } = createNexusEditor({ placeholder: false })
+    document.body.appendChild(editor)
+
+    expect(editor.config.placeholder).toBeNull()
+    expect(editor.contentElement.hasAttribute('data-placeholder')).toBe(false)
+    expect(editor.contentElement.hasAttribute('aria-placeholder')).toBe(false)
+    expect(editor.contentElement.hasAttribute('data-empty')).toBe(false)
+  })
+
+  it('applies a custom placeholder via config', () => {
+    const { element: editor } = createNexusEditor({ placeholder: 'Digite algo…' })
+    document.body.appendChild(editor)
+
+    expect(editor.contentElement.getAttribute('data-placeholder')).toBe('Digite algo…')
+    expect(editor.contentElement.getAttribute('aria-placeholder')).toBe('Digite algo…')
+  })
+
+  it('removes focus border state on blur', () => {
+    const editor = mountEditor()
+    const content = editor.contentElement
+    const frame = editor.contentFrameElement
+
+    content.focus()
+    expect(frame.hasAttribute('data-focused')).toBe(true)
+
+    content.blur()
+    expect(frame.hasAttribute('data-focused')).toBe(false)
+  })
+
+  it('does not focus the editor when clicking the scroller margin', () => {
+    const editor = mountEditor()
+    const content = editor.contentElement
+    const scroller = editor.scrollerElement
+    const frame = editor.contentFrameElement
+
+    content.focus()
+    expect(document.activeElement).toBe(content)
+
+    scroller.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+
+    expect(document.activeElement).not.toBe(content)
+    expect(frame.hasAttribute('data-focused')).toBe(false)
+  })
+
+  it('does not focus the editor when clicking the content frame margin', () => {
+    const editor = mountEditor()
+    const content = editor.contentElement
+    const frame = editor.contentFrameElement
+
+    content.focus()
+    expect(document.activeElement).toBe(content)
+
+    frame.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+
+    expect(document.activeElement).not.toBe(content)
+    expect(frame.hasAttribute('data-focused')).toBe(false)
+  })
+
   it('restores the empty placeholder after undoing image-only content', () => {
     const editor = mountEditor()
     editor.setContent('<p><img src="/img.png" alt="foto"></p>')
@@ -310,6 +391,7 @@ describe('nexus-editor', () => {
 
     const scroller = editor.querySelector('[data-nexus-scroller]')
     expect(scroller).not.toBeNull()
+    expect(scroller.contains(editor.contentFrameElement)).toBe(true)
     expect(scroller.contains(editor.contentElement)).toBe(true)
     expect(scroller.contains(source)).toBe(true)
     expect(editor.scrollerElement).toBe(scroller)
