@@ -1,4 +1,5 @@
 import { findAncestor } from '../../core/content-queries.js';
+import { getDefaultBlockTag } from '../../core/schema.js';
 
 const BLOCK_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'blockquote', 'li']);
 const LIST_ITEM_FLOW_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'blockquote']);
@@ -672,9 +673,15 @@ export function toggleList(root, selection, listTag) {
 
   const blocks = getListCommandBlocks(getBlocksInRange(root, range));
   if (blocks.length === 0) {
-    const paragraph = document.createElement('p');
+    const paragraph = document.createElement(getDefaultBlockTag());
     paragraph.appendChild(document.createElement('br'));
     root.appendChild(paragraph);
+
+    const newRange = document.createRange();
+    newRange.selectNodeContents(paragraph);
+    newRange.collapse(true);
+    selection.setRange(newRange);
+
     toggleList(root, selection, listTag);
     return;
   }

@@ -25,29 +25,46 @@ nexus-editor [data-nexus-scroller] {
   scroll-padding: var(--space-xs);
 }
 
-nexus-editor [data-nexus-content] {
+nexus-editor [data-nexus-content-frame] {
   box-sizing: border-box;
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 46rem;
   min-width: 0;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-xl) var(--space-2xl);
   flex: 1 0 auto;
   min-height: var(--nexus-content-min-height, 28rem);
-  outline: none;
   border: 2px solid transparent;
   background: var(--color-bg);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
 
-nexus-editor [data-nexus-content]:focus-visible {
+nexus-editor [data-nexus-content-frame]:focus-within,
+nexus-editor [data-nexus-content-frame][data-focused] {
   border-color: var(--color-focus-ring);
 }
 
-nexus-editor [data-nexus-content][data-empty]::before {
-  content: 'Comece a escrever…';
+nexus-editor [data-nexus-content] {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  min-height: 12rem;
+  outline: none;
+  cursor: text;
+}
+
+nexus-editor [data-nexus-content]:focus-visible {
+  outline: none;
+}
+
+nexus-editor [data-nexus-content][data-empty][data-placeholder]::before {
+  content: attr(data-placeholder);
   position: absolute;
   color: var(--color-text-muted);
   pointer-events: none;
@@ -127,6 +144,29 @@ nexus-editor [data-nexus-image-resize] {
   pointer-events: none;
 }
 
+nexus-editor [data-nexus-image-resize] .nexus-image-resize__delete {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 2px solid var(--color-bg);
+  border-radius: 999px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+nexus-editor [data-nexus-image-resize] .nexus-image-resize__delete svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
 nexus-editor [data-nexus-image-resize] .nexus-image-resize__handle {
   position: absolute;
   right: -0.35rem;
@@ -156,7 +196,6 @@ nexus-editor [data-nexus-source] {
   display: none;
   box-sizing: border-box;
   width: 100%;
-  max-width: 46rem;
   min-width: 0;
   margin: 0 auto;
   flex: 1 0 auto;
@@ -185,7 +224,7 @@ nexus-editor .source-window__input:focus-visible {
   border-color: var(--color-focus-ring);
 }
 
-nexus-editor[data-mode='source'] [data-nexus-content] {
+nexus-editor[data-mode='source'] [data-nexus-content-frame] {
   display: none;
 }
 
