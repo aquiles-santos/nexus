@@ -11,6 +11,7 @@ export {
 };
 
 export const DEFAULT_EDITOR_HEIGHT = '100%';
+export const DEFAULT_PLACEHOLDER = 'Comece a escrever…';
 
 export const DEFAULT_TOOLBAR = [
   'undo',
@@ -32,12 +33,14 @@ const ZERO_LENGTH_PATTERN = /^(?:0(?:\.0+)?(?:px|em|rem|vh|vw|vmin|vmax|%)?)$/i;
  * @typedef {Object} NexusEditorConfigInput
  * @property {number | string} [height]
  * @property {string | string[]} [toolbar]
+ * @property {string | false | null} [placeholder]
  */
 
 /**
  * @typedef {Object} NexusEditorConfig
  * @property {string} height
  * @property {string[]} toolbar
+ * @property {string | null} placeholder
  */
 
 /**
@@ -48,6 +51,7 @@ export function resolveEditorConfig(input = {}) {
   return {
     height: normalizeHeight(input.height),
     toolbar: normalizeToolbar(input.toolbar),
+    placeholder: normalizePlaceholder(input.placeholder),
   };
 }
 
@@ -106,4 +110,25 @@ export function normalizeToolbar(value) {
     .filter(Boolean);
 
   return compactToolbarItems(tokens);
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+export function normalizePlaceholder(value) {
+  if (value === false || value === null) {
+    return null;
+  }
+
+  if (value === undefined) {
+    return DEFAULT_PLACEHOLDER;
+  }
+
+  if (typeof value !== 'string') {
+    return DEFAULT_PLACEHOLDER;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
 }

@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   DEFAULT_EDITOR_HEIGHT,
+  DEFAULT_PLACEHOLDER,
   DEFAULT_TOOLBAR,
   TOOLBAR_SEPARATOR,
   normalizeHeight,
+  normalizePlaceholder,
   normalizeToolbar,
   resolveEditorConfig,
 } from './editor-config.js'
@@ -13,6 +15,7 @@ describe('editor-config', () => {
     expect(resolveEditorConfig()).toEqual({
       height: DEFAULT_EDITOR_HEIGHT,
       toolbar: DEFAULT_TOOLBAR,
+      placeholder: DEFAULT_PLACEHOLDER,
     })
   })
 
@@ -54,6 +57,14 @@ describe('editor-config', () => {
 
   it('uses the default toolbar for invalid values', () => {
     expect(normalizeToolbar(42)).toEqual(DEFAULT_TOOLBAR)
+  })
+
+  it('normalizes placeholder values', () => {
+    expect(normalizePlaceholder(undefined)).toBe(DEFAULT_PLACEHOLDER)
+    expect(normalizePlaceholder('Escreva aqui…')).toBe('Escreva aqui…')
+    expect(normalizePlaceholder(false)).toBeNull()
+    expect(normalizePlaceholder(null)).toBeNull()
+    expect(normalizePlaceholder('   ')).toBeNull()
   })
 
 })

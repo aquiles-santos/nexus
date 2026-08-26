@@ -49,6 +49,7 @@ export const editorConfig = {
 |---|---|---|---|
 | `height` | `number` ou `string` | `'100%'` | Número vira pixels (`400` → `400px`). String aceita `px`, `%`, `em`, `rem`, `vh`, `vw`, `auto`. Altura fixa zera o mínimo do papel (`--nexus-content-min-height`); o host pode sobrescrever o token. |
 | `toolbar` | `string[]` ou `string` | `undo redo \| formatBlock \| bold italic underline` | Define **quais** ferramentas aparecem e **em que ordem**. `\|` é separador. |
+| `placeholder` | `string`, `false` ou `null` | `'Comece a escrever…'` | Texto exibido quando o conteúdo está vazio. `false` ou `null` desativam o placeholder. String vazia (`''` ou só espaços) também desativa. |
 
 ### Regras da toolbar
 

@@ -2,7 +2,7 @@
  * @type {import('../../src/editor/editor-config.js').NexusEditorConfigInput}
  */
 export const editorConfig = {
-  height: 400,
+  height: 600,
   toolbar: [
     'undo',
     'redo',
@@ -11,6 +11,7 @@ export const editorConfig = {
     '|',
     'bold',
     'italic',
+    'underline',
     '|',
     'insertUnorderedList',
     'insertOrderedList',

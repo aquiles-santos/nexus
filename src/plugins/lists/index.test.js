@@ -158,4 +158,26 @@ describe('plugin-lists', () => {
     expect(listItems.map((item) => item.textContent)).toEqual(['Item 1', 'Item 2', 'Item 3']);
     expect(listItems.every((item) => item.querySelector(tag))).toBe(true);
   });
+
+  it('keeps list markers when the first item becomes a heading', () => {
+    const { element: editor } = createNexusEditor();
+    document.body.appendChild(editor);
+    editor.use(pluginLists);
+    editor.use(pluginBasicFormats);
+    editor.setContent('<ul><li>Title</li><li>Body</li></ul>');
+
+    const firstItemText = editor.contentElement.querySelector('li').firstChild;
+    const range = document.createRange();
+    range.setStart(firstItemText, 0);
+    range.collapse(true);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+
+    editor.execCommand('formatBlock', 'h1');
+
+    expect(editor.getContent({ format: 'html' })).toBe(
+      '<ul><li><h1>Title</h1></li><li>Body</li></ul>',
+    );
+    expect(editor.contentElement.querySelectorAll('ul > li')).toHaveLength(2);
+  });
 });
