@@ -1,8 +1,8 @@
 # Exemplo — contrato do wrapper Vue
 
-Este documento **congela** o que um wrapper Vue (`@nexus/vue`, pacote futuro) pode chamar no core. O Vue só encaminha props para `createNexusEditor` — o mesmo `init` da [configuração vanilla](./configuracao-e-inicializacao.md).
+Este documento **congela** o que o wrapper Vue (`@nexus/vue`) pode chamar no core. O Vue só encaminha props para `createNexusEditor` — o mesmo `init` da [configuração vanilla](./configuracao-e-inicializacao.md).
 
-**Este repositório permanece vanilla.** O SFC abaixo é especificação de referência. Não adicione `vue` ao `package.json` daqui.
+Implementação: [`packages/vue`](../../packages/vue/). O `package.json` da raiz permanece vanilla (sem Vue). Não reimplemente o catálogo no wrapper.
 
 Alvo do consumidor:
 
@@ -100,7 +100,7 @@ Não compare por referência de objeto. `getContent({ format: 'html' })` devolve
 
 ## Componente de referência (`NexusEditor.vue`)
 
-Código ilustrativo para o pacote futuro. Não é executado neste repo.
+O pacote em [`packages/vue/src/nexus-editor.js`](../../packages/vue/src/nexus-editor.js) é a implementação (ESM + `defineComponent`, sem compilador de SFC). O SFC abaixo é o mesmo contrato, na forma que um host Vue costuma copiar.
 
 ```vue
 <script setup>
@@ -176,7 +176,7 @@ onBeforeUnmount(() => {
 </template>
 ```
 
-O import `@nexus/core` é o nome previsto do core publicado. No localhost deste repo, o equivalente é `/src/nexus.js`.
+O import `@nexus/core` é o nome previsto do core publicado. No localhost, `@nexus/vue` importa [`/src/nexus.js`](/src/nexus.js).
 
 ---
 
@@ -185,7 +185,7 @@ O import `@nexus/core` é o nome previsto do core publicado. No localhost deste 
 ```vue
 <script setup>
 import { ref } from 'vue'
-import NexusEditor from './NexusEditor.vue'
+import NexusEditor from '@nexus/vue'
 
 const content = ref('<p>Rascunho</p>')
 

@@ -3,7 +3,13 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: ['node_modules/**', 'coverage/**', 'playwright-report/**', 'test-results/**'],
+    ignores: [
+      'node_modules/**',
+      'packages/vue/node_modules/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+    ],
   },
   {
     files: ['**/*.js'],
