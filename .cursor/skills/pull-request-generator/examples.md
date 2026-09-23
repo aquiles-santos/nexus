@@ -40,7 +40,7 @@ O formulário de login aceitava qualquer string no campo de e-mail. Esta PR vali
 Não se aplica
 ```
 
-No update, se o autor alterou Evidências (ex.: link de captura), o script `merge-evidencias.sh` preserva esse valor; as outras seções são regeneradas.
+No update, se o autor alterou Evidências (ex.: link de captura), o script `merge-evidence.sh` preserva esse valor; as outras seções são regeneradas.
 
 ---
 

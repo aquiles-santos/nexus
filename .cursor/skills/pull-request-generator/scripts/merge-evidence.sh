@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# merge-evidencias.sh — preserva a seção Evidências do body atual da PR no body novo.
-# Uso: echo "$NEW_BODY" | merge-evidencias.sh "$CURRENT_BODY"
+# merge-evidence.sh — preserves the Evidências section from the current PR body in the new body.
+# Usage: echo "$NEW_BODY" | merge-evidence.sh "$CURRENT_BODY"
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: merge-evidencias.sh <current-pr-body>" >&2
+  echo "Usage: merge-evidence.sh <current-pr-body>" >&2
   exit 1
 fi
 
 CURRENT_BODY="$1"
 NEW_BODY=$(cat)
 
-extract_evidencias() {
+extract_evidence() {
   awk '
     /^## Evidências/ { found=1; print; next }
     found && /^## / { exit }
@@ -19,7 +19,7 @@ extract_evidencias() {
   ' <<< "$1"
 }
 
-strip_evidencias() {
+strip_evidence() {
   awk '
     /^## Evidências/ { skip=1; next }
     skip && /^## / { skip=0 }
@@ -28,15 +28,15 @@ strip_evidencias() {
   ' <<< "$1"
 }
 
-EVIDENCIAS=$(extract_evidencias "$CURRENT_BODY")
+EVIDENCE=$(extract_evidence "$CURRENT_BODY")
 
-if [[ -z "$EVIDENCIAS" ]]; then
+if [[ -z "$EVIDENCE" ]]; then
   echo "Aviso: seção Evidências não encontrada no body atual; usando body novo sem alteração." >&2
   echo "$NEW_BODY"
   exit 0
 fi
 
-STRIPPED=$(strip_evidencias "$NEW_BODY")
+STRIPPED=$(strip_evidence "$NEW_BODY")
 
 # Garante linha em branco antes da seção Evidências preservada
-printf '%s\n\n%s\n' "${STRIPPED%"${STRIPPED##*[![:space:]]}"}" "$EVIDENCIAS"
+printf '%s\n\n%s\n' "${STRIPPED%"${STRIPPED##*[![:space:]]}"}" "$EVIDENCE"

@@ -31,4 +31,4 @@ const editorConfig = {
 
 No localhost, o componente importa o core em `src/nexus.js`. Publicação npm/CDN (`exports` do core, tokens, nome `@nexus/core`) fica para depois.
 
-Contrato completo: [`docs/exemplos/wrapper-vue.md`](../../docs/exemplos/wrapper-vue.md).
+Contrato completo: [`docs/examples/wrapper-vue.md`](../../docs/examples/wrapper-vue.md).

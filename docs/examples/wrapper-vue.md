@@ -1,6 +1,6 @@
 # Exemplo — contrato do wrapper Vue
 
-Este documento **congela** o que o wrapper Vue (`@nexus/vue`) pode chamar no core. O Vue só encaminha props para `createNexusEditor` — o mesmo `init` da [configuração vanilla](./configuracao-e-inicializacao.md).
+Este documento **congela** o que o wrapper Vue (`@nexus/vue`) pode chamar no core. O Vue só encaminha props para `createNexusEditor` — o mesmo `init` da [configuração vanilla](./configuration-and-initialization.md).
 
 Implementação: [`packages/vue`](../../packages/vue/). O `package.json` da raiz permanece vanilla (sem Vue). Não reimplemente o catálogo no wrapper.
 

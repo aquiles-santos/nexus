@@ -1,6 +1,6 @@
 # Exemplo — configuração e inicialização do Nexus
 
-Página ao vivo: [`/demo/integracao/`](/demo/integracao/) (`npm run dev` → [localhost:5173/demo/integracao/](http://localhost:5173/demo/integracao/)).
+Página ao vivo: [`/demo/integration/`](/demo/integration/) (`npm run dev` → [localhost:5173/demo/integration/](http://localhost:5173/demo/integration/)).
 
 O Nexus não usa um JSON externo. A configuração é um **módulo ES** que exporta um objeto `init` (altura, `plugins`, `toolbar`) e é passada na criação do editor (ou em `configure()` depois). Os plugins built-in entram **por nome**, no estilo TinyMCE — sem lista de imports no host.
 

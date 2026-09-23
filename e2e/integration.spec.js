@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('integration demo mounts a configured editor', async ({ page }) => {
-  await page.goto('/demo/integracao/')
+  await page.goto('/demo/integration/')
 
   await expect(page.getByRole('heading', { name: 'Nova publicação' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Integração' })).toHaveAttribute('aria-current', 'page')
@@ -52,7 +52,7 @@ test('integration demo mounts a configured editor', async ({ page }) => {
 })
 
 test('integration demo applies bold from the host-configured toolbar', async ({ page }) => {
-  await page.goto('/demo/integracao/')
+  await page.goto('/demo/integration/')
 
   const content = page.locator('nexus-editor [data-nexus-content]')
   await content.click()
@@ -68,12 +68,12 @@ test('playground links to the integration demo', async ({ page }) => {
   await page.goto('/demo/')
 
   await page.getByRole('navigation', { name: 'Demos' }).getByRole('link', { name: 'Integração' }).click()
-  await expect(page).toHaveURL(/\/demo\/integracao\/?$/)
+  await expect(page).toHaveURL(/\/demo\/integration\/?$/)
   await expect(page.getByRole('heading', { name: 'Nova publicação' })).toBeVisible()
 })
 
 test('integration editor scrolls when content exceeds the configured height', async ({ page }) => {
-  await page.goto('/demo/integracao/')
+  await page.goto('/demo/integration/')
 
   const longContent = Array.from({ length: 80 }, (_, index) => `<p>Paragraph ${index + 1}</p>`).join('')
   await page.locator('nexus-editor').evaluate((editor, html) => {
@@ -107,7 +107,7 @@ const PIXEL_PNG = Buffer.from(
 )
 
 test('integration demo renders a local image inside the editor', async ({ page }) => {
-  await page.goto('/demo/integracao/')
+  await page.goto('/demo/integration/')
 
   const editor = page.locator('nexus-editor')
   const content = editor.locator('[data-nexus-content]')
@@ -133,7 +133,7 @@ test('integration demo renders a local image inside the editor', async ({ page }
 })
 
 test('tall images stay within the writing area while the editor scrolls', async ({ page }) => {
-  await page.goto('/demo/integracao/')
+  await page.goto('/demo/integration/')
 
   await page.locator('nexus-editor').evaluate(async (editor) => {
     const canvas = document.createElement('canvas')

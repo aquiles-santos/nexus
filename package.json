@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Editor WYSIWYG em JavaScript puro com ES modules e Web Components",
+  "description": "Pure JavaScript WYSIWYG editor with ES modules and Web Components",
   "scripts": {
     "dev": "serve -l 5173 --cors",
     "test": "vitest run",

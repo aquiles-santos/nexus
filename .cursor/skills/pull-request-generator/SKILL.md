@@ -49,7 +49,7 @@ Em falhas de preflight (gh não autenticado, sem alterações), não há link �
 
 - Body template: [template.md](template.md)
 - Exemplos e mensagens preflight: [examples.md](examples.md)
-- Preservar Evidências no update: [scripts/merge-evidencias.sh](scripts/merge-evidencias.sh)
+- Preservar Evidências no update: [scripts/merge-evidence.sh](scripts/merge-evidence.sh)
 
 ## Validações prévias (obrigatórias)
 
@@ -145,7 +145,7 @@ Título: conciso, em português ou padrão do repo; reflete o escopo principal.
 8. Mesclar Evidências do body atual (script dentro da pasta do skill):
 
 ```bash
-cat /tmp/pr-body-new.md | bash scripts/merge-evidencias.sh "$(gh pr view --json body -q .body)" > /tmp/pr-body.md
+cat /tmp/pr-body-new.md | bash scripts/merge-evidence.sh "$(gh pr view --json body -q .body)" > /tmp/pr-body.md
 ```
 
 9. Push se ahead; `gh pr edit --body-file /tmp/pr-body.md`
