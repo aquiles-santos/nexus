@@ -33,6 +33,7 @@ describe('nexus-editor', () => {
 
     expect(editor.config.height).toBe(DEFAULT_EDITOR_HEIGHT)
     expect(editor.config.toolbar).toEqual(DEFAULT_TOOLBAR)
+    expect(editor.config.plugins).toEqual([])
     expect(editor.style.getPropertyValue('--nexus-editor-height')).toBe(DEFAULT_EDITOR_HEIGHT)
   })
 
@@ -214,6 +215,23 @@ describe('nexus-editor', () => {
 
     editor.contentElement.innerHTML = '<p><a href="javascript:alert(1)">x</a></p>'
     expect(editor.getContent({ format: 'html' })).not.toContain('javascript:')
+  })
+
+  it('stores plugin names from config without importing the catalog', () => {
+    const { element: editor } = createNexusEditor({ plugins: 'basic-formats' })
+    document.body.appendChild(editor)
+
+    expect(editor.config.plugins).toEqual(['basic-formats'])
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="bold"]')).toBeNull()
+  })
+
+  it('merges plugin names additively on configure', () => {
+    const { element: editor } = createNexusEditor({ plugins: 'lists' })
+    editor.configure({ plugins: 'link' })
+    editor.configure({ height: 320 })
+
+    expect(editor.config.plugins).toEqual(['lists', 'link'])
+    expect(editor.config.height).toBe('320px')
   })
 
   it('registers plugins called before connect', () => {

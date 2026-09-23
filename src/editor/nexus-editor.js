@@ -10,7 +10,7 @@ import { createUndoManager } from '../core/undo-manager.js';
 import { createEventBus } from '../shared/event-bus.js';
 import { createPluginRegistry, getShortcutKey } from '../shared/plugin-registry.js';
 import { createToolbarIcon } from '../ui/icons/icons.js';
-import { resolveEditorConfig } from './editor-config.js';
+import { mergePluginNames, resolveEditorConfig } from './editor-config.js';
 import '../ui/toolbar/nexus-toolbar.js';
 import '../ui/tooltip/nexus-tooltip.js';
 import '../ui/modal/nexus-modal.js';
@@ -285,6 +285,7 @@ class NexusEditorElement extends HTMLElement {
       toolbar: input.toolbar !== undefined ? input.toolbar : this._config.toolbar,
       placeholder:
         input.placeholder !== undefined ? input.placeholder : this._config.placeholder,
+      plugins: mergePluginNames(this._config.plugins, input.plugins),
     });
     this._applyHeight();
     this._syncPlaceholder();
@@ -702,6 +703,7 @@ class NexusEditorElement extends HTMLElement {
       height: this._config.height,
       toolbar: [...this._config.toolbar],
       placeholder: this._config.placeholder,
+      plugins: [...this._config.plugins],
     };
   }
 

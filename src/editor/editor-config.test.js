@@ -4,8 +4,10 @@ import {
   DEFAULT_PLACEHOLDER,
   DEFAULT_TOOLBAR,
   TOOLBAR_SEPARATOR,
+  mergePluginNames,
   normalizeHeight,
   normalizePlaceholder,
+  normalizePlugins,
   normalizeToolbar,
   resolveEditorConfig,
 } from './editor-config.js'
@@ -16,6 +18,7 @@ describe('editor-config', () => {
       height: DEFAULT_EDITOR_HEIGHT,
       toolbar: DEFAULT_TOOLBAR,
       placeholder: DEFAULT_PLACEHOLDER,
+      plugins: [],
     })
   })
 
@@ -65,6 +68,26 @@ describe('editor-config', () => {
     expect(normalizePlaceholder(false)).toBeNull()
     expect(normalizePlaceholder(null)).toBeNull()
     expect(normalizePlaceholder('   ')).toBeNull()
+  })
+
+  it('treats omitted, empty, or invalid plugins as none', () => {
+    expect(normalizePlugins(undefined)).toEqual([])
+    expect(normalizePlugins('')).toEqual([])
+    expect(normalizePlugins([])).toEqual([])
+    expect(normalizePlugins(42)).toEqual([])
+  })
+
+  it('normalizes plugin names from a string or array and ignores plugin objects', () => {
+    expect(normalizePlugins('  lists   link  lists ')).toEqual(['lists', 'link'])
+    expect(
+      normalizePlugins(['basic-formats', { name: 'custom', init() {} }, 'lists']),
+    ).toEqual(['basic-formats', 'lists'])
+  })
+
+  it('merges plugin names additively without duplicates', () => {
+    expect(mergePluginNames(['lists'], undefined)).toEqual(['lists'])
+    expect(mergePluginNames(['lists'], 'link lists')).toEqual(['lists', 'link'])
+    expect(mergePluginNames(['lists'], [])).toEqual(['lists'])
   })
 
 })
