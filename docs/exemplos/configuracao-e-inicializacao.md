@@ -4,6 +4,8 @@ Página ao vivo: [`/demo/integracao/`](/demo/integracao/) (`npm run dev` → [lo
 
 O Nexus não usa um JSON externo. A configuração é um **módulo ES** que exporta um objeto `init` (altura, `plugins`, `toolbar`) e é passada na criação do editor (ou em `configure()` depois). Os plugins built-in entram **por nome**, no estilo TinyMCE — sem lista de imports no host.
 
+Um wrapper Vue futuro só encaminha esse `init` (mais `v-model` e `destroy`). O contrato está em [wrapper-vue.md](./wrapper-vue.md); este pacote não depende de Vue.
+
 Este exemplo mostra o trio usual numa página hospedeira:
 
 ```
