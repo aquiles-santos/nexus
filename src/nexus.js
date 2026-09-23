@@ -12,9 +12,6 @@ import { resolvePlugins } from './plugins/catalog.js';
  * @typedef {import('./editor/nexus-editor.js').NexusEditorElement} NexusEditorElement
  */
 
-/** @type {WeakSet<NexusEditorElement>} */
-const catalogBound = new WeakSet();
-
 /**
  * @param {NexusEditorElement} element
  * @param {import('./editor/editor-config.js').NexusEditorConfigInput['plugins']} pluginsInput
@@ -30,30 +27,15 @@ function applyInitPlugins(element, pluginsInput) {
 }
 
 /**
- * @param {NexusEditorElement} element
- */
-function bindCatalogConfigure(element) {
-  if (catalogBound.has(element)) {
-    return;
-  }
-
-  const originalConfigure = element.configure.bind(element);
-  element.configure = (input = {}) => {
-    originalConfigure(input);
-    applyInitPlugins(element, input.plugins);
-  };
-  catalogBound.add(element);
-}
-
-/**
  * Applies `init` (including catalog plugin names) to a `<nexus-editor>` already in the page.
+ * Plugin names are resolved here. `element.configure` only stores them.
  *
  * @param {NexusEditorElement} element
  * @param {import('./editor/editor-config.js').NexusEditorConfigInput} [input]
  */
 export function configureNexusEditor(element, input = {}) {
-  bindCatalogConfigure(element);
   element.configure(input);
+  applyInitPlugins(element, input.plugins);
 }
 
 /**
@@ -65,7 +47,6 @@ export function configureNexusEditor(element, input = {}) {
  */
 export function createNexusEditor(config) {
   const { element, destroy } = createNexusEditorElement(config);
-  bindCatalogConfigure(element);
   applyInitPlugins(element, config?.plugins);
 
   return { element, destroy };

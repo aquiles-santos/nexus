@@ -130,7 +130,7 @@ class NexusEditorElement extends HTMLElement {
     this._commands = createCommands(this._content, this._selection);
     this._undo = createUndoManager(this._content, () => this._selection.saveBookmark());
     this._bus = createEventBus();
-    this._registry = createPluginRegistry(this, this._bus);
+    this._registry = createPluginRegistry(this);
 
     this._undo.reset();
     this._registerHistoryItems();

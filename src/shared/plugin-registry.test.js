@@ -1,12 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createEventBus } from './event-bus.js'
 import { createPluginRegistry, getShortcutKey } from './plugin-registry.js'
 
 describe('plugin-registry', () => {
   it('registers plugin commands and shortcuts', () => {
-    const bus = createEventBus()
     const editor = { execCommand: vi.fn() }
-    const registry = createPluginRegistry(editor, bus)
+    const registry = createPluginRegistry(editor)
 
     const plugin = {
       name: 'test-plugin',
@@ -25,28 +23,23 @@ describe('plugin-registry', () => {
     expect(registry.execCommand('bold')).toBe(true)
   })
 
-  it('handles keyboard shortcuts', () => {
-    const bus = createEventBus()
-    const editor = { execCommand: vi.fn() }
-    const registry = createPluginRegistry(editor, bus)
+  it('exposes registered shortcuts for the editor keydown handler', () => {
+    const registry = createPluginRegistry({})
 
     registry.use({
       name: 'formats',
       init: () => {},
-      commands: { bold: () => editor.execCommand('bold') },
+      commands: { bold: () => {} },
       shortcuts: { 'Ctrl+B': 'bold' },
       destroy: () => {},
     })
 
-    const event = new KeyboardEvent('keydown', { key: 'b', ctrlKey: true, bubbles: true })
-    expect(registry.handleShortcut(event)).toBe(true)
-    expect(editor.execCommand).toHaveBeenCalledWith('bold')
+    expect(registry.getShortcuts().get('Ctrl+B')).toBe('bold')
   })
 
   it('disables and re-enables plugins', () => {
-    const bus = createEventBus()
     const editor = {}
-    const registry = createPluginRegistry(editor, bus)
+    const registry = createPluginRegistry(editor)
     const destroy = vi.fn()
 
     registry.use({

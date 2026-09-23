@@ -80,6 +80,7 @@ export const pluginLink = {
         command: 'insertLink',
         label: 'Link',
         icon: () => createToolbarIcon('link'),
+        overflowPriority: 30,
       }),
     );
   },
@@ -101,8 +102,8 @@ export const pluginLink = {
       const form = document.createElement('form');
       form.noValidate = true;
 
-      const textField = createField('Display Text', 'link-text', {
-        placeholder: 'Link text',
+      const textField = createField('Texto exibido', 'link-text', {
+        placeholder: 'Texto do link',
       });
       const urlField = createUrlField();
       form.append(textField.field, urlField.field);
@@ -121,7 +122,7 @@ export const pluginLink = {
         if (!isSafeHref(href)) {
           urlField.error.hidden = false;
           urlField.error.textContent =
-            'Enter a valid http, https, mailto, or tel URL.';
+            'Informe uma URL http, https, mailto ou tel válida.';
           urlField.input.setAttribute('aria-invalid', 'true');
           urlField.input.focus();
           return;
@@ -145,15 +146,15 @@ export const pluginLink = {
       });
 
       editor.modal.open({
-        title: 'Insert link',
+        title: 'Inserir link',
         content: form,
         actions: [
           {
-            label: 'Insert',
+            label: 'Inserir',
             primary: true,
             action: handleInsert,
           },
-          { label: 'Cancel', action: () => {} },
+          { label: 'Cancelar', action: () => {} },
         ],
       });
 
@@ -226,13 +227,6 @@ export const pluginLink = {
   },
 
   destroy(editor) {
-    if (editor) {
-      clearState(editor);
-      return;
-    }
-
-    for (const instance of [...stateByEditor.keys()]) {
-      clearState(instance);
-    }
+    clearState(editor);
   },
 };

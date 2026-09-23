@@ -91,6 +91,7 @@ export const pluginSourceCode = {
           label: 'Código',
           icon: () => createToolbarIcon('code'),
           type: 'toggle',
+          overflowPriority: 10,
         }),
       ],
     });
@@ -109,14 +110,7 @@ export const pluginSourceCode = {
   shortcuts: {},
 
   destroy(editor) {
-    if (editor) {
-      clearState(editor);
-      return;
-    }
-
-    for (const instance of [...stateByEditor.keys()]) {
-      clearState(instance);
-    }
+    clearState(editor);
   },
 };
 

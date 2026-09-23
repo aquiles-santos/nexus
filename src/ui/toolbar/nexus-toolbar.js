@@ -15,16 +15,8 @@ const PINNED_TOOLBAR_IDS = new Set([
   'underline',
 ]);
 
-const OVERFLOW_PRIORITY = {
-  toggleSource: 10,
-  insertImage: 20,
-  insertLink: 30,
-  insertOrderedList: 40,
-  insertUnorderedList: 50,
-};
-
 /**
- * @typedef {{ command: string, label: string, text?: string, icon?: Node | (() => Node), type?: 'toggle' | 'button', value?: string, disabled?: boolean, options?: { value: string, label: string }[] }} NexusToolbarItem
+ * @typedef {{ command: string, label: string, text?: string, icon?: Node | (() => Node), type?: 'toggle' | 'button', value?: string, disabled?: boolean, options?: { value: string, label: string }[], overflowPriority?: number }} NexusToolbarItem
  */
 
 function resolveToolbarIcon(icon) {
@@ -586,9 +578,10 @@ class NexusToolbarElement extends HTMLElement {
       ) {
         continue;
       }
+      const definition = this._catalog.get(id);
       candidates.push({
         mountKey,
-        priority: OVERFLOW_PRIORITY[id] ?? 100,
+        priority: definition?.overflowPriority ?? 100,
       });
     }
 

@@ -1,3 +1,4 @@
+import { findAncestor } from './content-queries.js';
 import { isAllowedTag, isBlock, getDefaultBlockTag, getInlineTag } from './schema.js';
 
 const LIST_ITEM_FLOW_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'blockquote']);
@@ -10,28 +11,15 @@ export function createFormatter(root, selection) {
   /** @type {Set<string>} */
   const pendingMarks = new Set();
 
-  function findAncestorBlock(tag) {
+  function findAncestorBlock() {
     const range = selection.getRange();
     if (!range) {
       return null;
     }
 
-    let node = range.commonAncestorContainer;
-    if (node.nodeType === Node.TEXT_NODE) {
-      node = node.parentNode;
-    }
-
-    while (node && node !== root) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const nodeTag = node.tagName.toLowerCase();
-        if (isBlock(nodeTag) && (!tag || nodeTag === tag)) {
-          return /** @type {HTMLElement} */ (node);
-        }
-      }
-      node = node.parentNode;
-    }
-
-    return null;
+    return findAncestor(root, range.commonAncestorContainer, (element) =>
+      isBlock(element.tagName.toLowerCase()),
+    );
   }
 
   function findAncestorInlineFromNode(tag, node) {

@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 ```
 
-O elemento já conectou com os **padrões**. `configure()` mescla altura, toolbar e `plugins` (aditivo) em seguida.
+O elemento já conectou com os **padrões**. `configureNexusEditor` mescla altura e toolbar e registra `plugins` (aditivo) em seguida.
 
 ---
 
@@ -198,7 +198,7 @@ Resultado:
 
 ## Atualizar depois de montado
 
-`configure()` e `editor.config = …` **mesclam** com o valor atual: o campo omitido permanece. `plugins` é **aditivo** (não descarrega o que já foi registrado).
+`configure()` e `editor.config = …` **mesclam** altura, toolbar e os nomes em `config.plugins` com o valor atual: o campo omitido permanece. Esses nomes são aditivos no `config`, mas **não** carregam o catálogo. Para registrar plugins depois da criação, use `configureNexusEditor`.
 
 ```javascript
 editor.configure({ height: 320 })
@@ -211,9 +211,9 @@ console.log(editor.config)
 Para estender o padrão em vez de substituir:
 
 ```javascript
-import { DEFAULT_TOOLBAR } from '/src/nexus.js'
+import { configureNexusEditor, DEFAULT_TOOLBAR } from '/src/nexus.js'
 
-editor.configure({
+configureNexusEditor(editor, {
   plugins: 'link',
   toolbar: [...DEFAULT_TOOLBAR, '|', 'insertLink'],
 })

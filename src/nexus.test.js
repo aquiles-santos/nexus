@@ -35,7 +35,21 @@ describe('createNexusEditor (catalog factory)', () => {
     expect(editor.toolbar.shadowRoot.querySelector('[data-command="insertUnorderedList"]')).not.toBeNull()
   })
 
-  it('adds plugins from later configure calls without unloading existing ones', () => {
+  it('adds plugins from later configureNexusEditor calls without unloading existing ones', () => {
+    const { element: editor } = createNexusEditor({
+      plugins: 'basic-formats',
+      toolbar: ['bold', 'insertUnorderedList'],
+    })
+    document.body.appendChild(editor)
+
+    configureNexusEditor(editor, { plugins: 'lists' })
+
+    expect(editor.config.plugins).toEqual(['basic-formats', 'lists'])
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="bold"]')).not.toBeNull()
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="insertUnorderedList"]')).not.toBeNull()
+  })
+
+  it('stores later plugin names on element.configure without loading the catalog', () => {
     const { element: editor } = createNexusEditor({
       plugins: 'basic-formats',
       toolbar: ['bold', 'insertUnorderedList'],
@@ -45,8 +59,7 @@ describe('createNexusEditor (catalog factory)', () => {
     editor.configure({ plugins: 'lists' })
 
     expect(editor.config.plugins).toEqual(['basic-formats', 'lists'])
-    expect(editor.toolbar.shadowRoot.querySelector('[data-command="bold"]')).not.toBeNull()
-    expect(editor.toolbar.shadowRoot.querySelector('[data-command="insertUnorderedList"]')).not.toBeNull()
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="insertUnorderedList"]')).toBeNull()
   })
 
   it('throws when init names a plugin that is not in the catalog', () => {

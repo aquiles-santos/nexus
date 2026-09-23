@@ -70,12 +70,14 @@ export const pluginLists = {
         label: 'Lista com marcadores',
         icon: () => createToolbarIcon('listUl'),
         type: 'toggle',
+        overflowPriority: 50,
       }),
       editor.toolbar.registerItem('insertOrderedList', {
         command: 'insertOrderedList',
         label: 'Lista numerada',
         icon: () => createToolbarIcon('listOl'),
         type: 'toggle',
+        overflowPriority: 40,
       }),
     ]);
   },
@@ -100,13 +102,6 @@ export const pluginLists = {
   shortcuts: {},
 
   destroy(editor) {
-    if (editor) {
-      clearTeardowns(editor);
-      return;
-    }
-
-    for (const instance of [...teardownsByEditor.keys()]) {
-      clearTeardowns(instance);
-    }
+    clearTeardowns(editor);
   },
 };

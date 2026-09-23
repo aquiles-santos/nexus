@@ -147,7 +147,7 @@ test('inserts a link from the modal', async ({ page }) => {
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('URL').fill('https://example.com')
-  await dialog.getByRole('button', { name: 'Insert' }).click()
+  await dialog.getByRole('button', { name: 'Inserir' }).click()
 
   await expect(dialog).toBeHidden()
   await expect(content.locator('a')).toHaveAttribute('href', 'https://example.com')
@@ -167,7 +167,7 @@ test('inserts a link with Ctrl+K', async ({ page }) => {
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('URL').fill('https://example.com/docs')
-  await dialog.getByRole('button', { name: 'Insert' }).click()
+  await dialog.getByRole('button', { name: 'Inserir' }).click()
 
   await expect(content.locator('a')).toHaveAttribute('href', 'https://example.com/docs')
 })
@@ -184,10 +184,12 @@ test('shows an error when the link href is unsafe', async ({ page }) => {
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('URL').fill('javascript:alert(1)')
-  await dialog.getByRole('button', { name: 'Insert' }).click()
+  await dialog.getByRole('button', { name: 'Inserir' }).click()
 
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByRole('alert')).toHaveText(/valid http, https, mailto, or tel URL/i)
+  await expect(dialog.getByRole('alert')).toHaveText(
+    'Informe uma URL http, https, mailto ou tel válida.',
+  )
   await expect(content.locator('a')).toHaveCount(0)
 })
 

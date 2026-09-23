@@ -371,6 +371,7 @@ export function createPluginMedia(adapter) {
           command: 'insertImage',
           label: 'Imagem',
           icon: () => createToolbarIcon('image'),
+          overflowPriority: 20,
         }),
       );
     },
@@ -385,14 +386,7 @@ export function createPluginMedia(adapter) {
     shortcuts: {},
 
     destroy(editor) {
-      if (editor) {
-        clearState(editor);
-        return;
-      }
-
-      for (const instance of [...stateByEditor.keys()]) {
-        clearState(instance);
-      }
+      clearState(editor);
     },
   };
 }

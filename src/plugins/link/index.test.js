@@ -34,6 +34,37 @@ describe('plugin-link', () => {
     expect(anchor?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
+  it('opens the link modal in Portuguese and rejects an unsafe URL', () => {
+    const { element: editor } = createNexusEditor();
+    document.body.appendChild(editor);
+    editor.use(pluginLink);
+    editor.setContent('<p>Exemplo</p>');
+
+    const textNode = editor.contentElement.querySelector('p').firstChild;
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+
+    editor.execCommand('insertLink');
+
+    const dialog = editor.modal.shadowRoot.querySelector('dialog');
+    expect(dialog.querySelector('.modal__title').textContent).toBe('Inserir link');
+    expect(dialog.querySelector('label[for="link-text"]').textContent).toBe('Texto exibido');
+    expect(dialog.querySelector('#link-text').getAttribute('placeholder')).toBe('Texto do link');
+
+    const labels = [...dialog.querySelectorAll('button')].map((button) => button.textContent);
+    expect(labels).toEqual(['Inserir', 'Cancelar']);
+
+    dialog.querySelector('#link-url').value = 'javascript:alert(1)';
+    dialog.querySelector('button.modal__button--primary').click();
+
+    expect(dialog.querySelector('#link-url-error').textContent).toBe(
+      'Informe uma URL http, https, mailto ou tel válida.',
+    );
+    expect(editor.contentElement.querySelector('a')).toBeNull();
+  });
+
   it('rejects javascript hrefs', () => {
     const { element: editor } = createNexusEditor();
     document.body.appendChild(editor);

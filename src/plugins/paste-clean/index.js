@@ -35,13 +35,6 @@ export const pluginPasteClean = {
   shortcuts: {},
 
   destroy(editor) {
-    if (editor) {
-      clearTeardowns(editor);
-      return;
-    }
-
-    for (const instance of [...teardownsByEditor.keys()]) {
-      clearTeardowns(instance);
-    }
+    clearTeardowns(editor);
   },
 };

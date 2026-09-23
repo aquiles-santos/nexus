@@ -4,14 +4,13 @@
  * @property {(editor: unknown) => void} init
  * @property {Record<string, (editor: unknown, ...args: unknown[]) => void>} commands
  * @property {Record<string, string>} [shortcuts]
- * @property {(editor?: unknown) => void} destroy
+ * @property {(editor: unknown) => void} destroy
  */
 
 /**
  * @param {unknown} editor
- * @param {ReturnType<import('./event-bus.js').createEventBus>} bus
  */
-export function createPluginRegistry(editor, bus) {
+export function createPluginRegistry(editor) {
   /** @type {Map<string, { plugin: NexusPlugin, enabled: boolean }>} */
   const plugins = new Map();
   /** @type {Map<string, string>} */
@@ -38,7 +37,6 @@ export function createPluginRegistry(editor, bus) {
     }
 
     plugin.init(editor);
-    bus.emit('plugin:registered', plugin.name);
   }
 
   function disable(name) {
@@ -59,8 +57,6 @@ export function createPluginRegistry(editor, bus) {
         shortcuts.delete(shortcut);
       }
     }
-
-    bus.emit('plugin:disabled', name);
   }
 
   function enable(name) {
@@ -82,7 +78,6 @@ export function createPluginRegistry(editor, bus) {
     }
 
     entry.plugin.init(editor);
-    bus.emit('plugin:enabled', name);
   }
 
   function execCommand(command, ...args) {
@@ -92,17 +87,6 @@ export function createPluginRegistry(editor, bus) {
     }
     handler(editor, ...args);
     return true;
-  }
-
-  function handleShortcut(event) {
-    const key = getShortcutKey(event);
-    const command = shortcuts.get(key);
-    if (!command) {
-      return false;
-    }
-
-    event.preventDefault();
-    return execCommand(command);
   }
 
   function destroy() {
@@ -119,7 +103,6 @@ export function createPluginRegistry(editor, bus) {
     enable,
     disable,
     execCommand,
-    handleShortcut,
     destroy,
     getCommands: () => new Map(commands),
     getShortcuts: () => new Map(shortcuts),
