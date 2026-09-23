@@ -1,5 +1,5 @@
 ---
-name: pull-request
+name: pull-request-generator
 description: >-
   Gera e atualiza Pull Requests no GitHub a partir do contexto do chat e do diff.
   Usa template padronizado (Tipo, Descrição, O que foi feito, Como testar, Evidências).
@@ -7,17 +7,17 @@ description: >-
   Use quando o usuário pede "Crie a PR", "Atualize a PR", criar/atualizar PR, ou open/update PR.
 ---
 
-# Pull Request — Nexus
+# Pull Request
 
-Automatiza criação e atualização de PRs via `gh`, com body em `/tmp/nexus-pr-body.md`. Idioma: **português**.
+Automatiza criação e atualização de PRs via `gh`, com body em `/tmp/pr-body.md`. Idioma: **português**.
 
 **Não** commitar automaticamente. Push só neste fluxo (sem `--force`). **Não** alterar `git config`.
 
 ## Triggers
 
-| Comando | Ação |
-|---------|------|
-| **Crie a PR** | Gera body, push se necessário, `gh pr create` |
+| Comando           | Ação                                                             |
+| ----------------- | ---------------------------------------------------------------- |
+| **Crie a PR**     | Gera body, push se necessário, `gh pr create`                    |
 | **Atualize a PR** | Regenera body (preserva Evidências), push se ahead, `gh pr edit` |
 
 Equivalentes: criar/atualizar PR, open/update PR.
@@ -78,12 +78,12 @@ Após `git status`, se há staged/unstaged/untracked:
 
 ### 3. Sem alterações para a operação
 
-| Situação | Ação |
-|----------|------|
-| **Crie** — zero commits à frente da base, working tree limpo | Parar. Mensagem [sem alterações — criar](examples.md#sem-alterações-criar-pr) |
-| **Crie** — zero commits à frente da base + uncommitted | Parar. Informar **ambos** |
-| **Atualize** — PR existe, branch não ahead do remoto | Parar. Mensagem [sem alterações — atualizar](examples.md#sem-alterações-atualizar-pr) |
-| **Atualize** — sem PR na branch | Parar. Orientar **"Crie a PR"** |
+| Situação                                                     | Ação                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **Crie** — zero commits à frente da base, working tree limpo | Parar. Mensagem [sem alterações — criar](examples.md#sem-alterações-criar-pr)         |
+| **Crie** — zero commits à frente da base + uncommitted       | Parar. Informar **ambos**                                                             |
+| **Atualize** — PR existe, branch não ahead do remoto         | Parar. Mensagem [sem alterações — atualizar](examples.md#sem-alterações-atualizar-pr) |
+| **Atualize** — sem PR na branch                              | Parar. Orientar **"Crie a PR"**                                                       |
 
 ### 4. Base branch (obrigatória)
 
@@ -91,11 +91,11 @@ Após `git status`, se há staged/unstaged/untracked:
 
 Definir `<head>` (branch da PR) e `<base>` **antes** de qualquer coleta git, body ou `gh pr create`.
 
-| Prioridade | Origem de `<base>` |
-|------------|-------------------|
-| 1 | Usuário solicitou explicitamente (ex.: "PR para `develop`") |
-| 2 | Branch de criação detectada no reflog (abaixo) |
-| 3 | Ambíguo ou indetectável → **perguntar** ao usuário |
+| Prioridade | Origem de `<base>`                                          |
+| ---------- | ----------------------------------------------------------- |
+| 1          | Usuário solicitou explicitamente (ex.: "PR para `develop`") |
+| 2          | Branch de criação detectada no reflog (abaixo)              |
+| 3          | Ambíguo ou indetectável → **perguntar** ao usuário          |
 
 **Detecção** (`<head>` = branch atual da PR):
 
@@ -103,11 +103,11 @@ Definir `<head>` (branch da PR) e `<base>` **antes** de qualquer coleta git, bod
 git reflog show <head> | grep 'branch: Created from' | tail -1
 ```
 
-| Reflog | `<base>` |
-|--------|----------|
-| `branch: Created from <nome>` e `<nome>` ≠ `HEAD` | `<nome>` |
-| `branch: Created from HEAD` | commit `C` da linha; branch local cujo tip é `C`: `git branch --points-at C --format='%(refname:short)'` (excluir `<head>`) |
-| Tip movido desde a criação | entre branches locais `B` ≠ `<head>`, usar `B` em que `git merge-base B <head>` = `C`; empate → `main`, `develop`, `master`; ainda ambíguo → perguntar |
+| Reflog                                            | `<base>`                                                                                                                                               |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `branch: Created from <nome>` e `<nome>` ≠ `HEAD` | `<nome>`                                                                                                                                               |
+| `branch: Created from HEAD`                       | commit `C` da linha; branch local cujo tip é `C`: `git branch --points-at C --format='%(refname:short)'` (excluir `<head>`)                            |
+| Tip movido desde a criação                        | entre branches locais `B` ≠ `<head>`, usar `B` em que `git merge-base B <head>` = `C`; empate → `main`, `develop`, `master`; ainda ambíguo → perguntar |
 
 **Validação:** `git log <base>..<head>` deve ter commits. Se vazio → parar e avisar.
 
@@ -126,9 +126,9 @@ git reflog show <head> | grep 'branch: Created from' | tail -1
 5. Sem commits à frente de `<base>` em `<head>` → parar (avisar uncommitted se houver)
 6. Uncommitted → avisar; body usa **só commits** (não incluir uncommitted)
 7. Preencher seções (chat + diff dos commits) — ver [Regras de preenchimento](#regras-de-preenchimento)
-8. Gravar `/tmp/nexus-pr-body.md`
-9. `git push -u origin HEAD` se necessário (`required_permissions: ["all"]` ou `network` + `git_write`)
-10. `gh pr create --base <base> --title "..." --body-file /tmp/nexus-pr-body.md`
+8. Gravar `/tmp/pr-body.md`
+9. `git push -u origin HEAD` se necessário
+10. `gh pr create --base <base> --title "..." --body-file /tmp/pr-body.md`
 11. **Retornar link da PR** na resposta (`gh pr view --json url -q .url` se create não imprimiu URL); incluir `<base>` ← `<head>`; repetir aviso de uncommitted se ainda existir
 
 Título: conciso, em português ou padrão do repo; reflete o escopo principal.
@@ -141,14 +141,14 @@ Título: conciso, em português ou padrão do repo; reflete o escopo principal.
 4. Usar `baseRefName` da PR existente como `<base>` para `git log <base>...HEAD` e `git diff <base>...HEAD`
 5. Branch não ahead do remoto (`git status -sb` / `git log origin/<branch>..HEAD`) → parar; nada a atualizar
 6. Uncommitted → avisar; body reflete só commits na branch
-7. Gerar body novo (seções exceto Evidências) em `/tmp/nexus-pr-body-new.md`
-8. Mesclar Evidências do body atual:
+7. Gerar body novo (seções exceto Evidências) em `/tmp/pr-body-new.md`
+8. Mesclar Evidências do body atual (script dentro da pasta do skill):
 
 ```bash
-cat /tmp/nexus-pr-body-new.md | bash .cursor/skills/pull-request/scripts/merge-evidencias.sh "$(gh pr view --json body -q .body)" > /tmp/nexus-pr-body.md
+cat /tmp/pr-body-new.md | bash scripts/merge-evidencias.sh "$(gh pr view --json body -q .body)" > /tmp/pr-body.md
 ```
 
-9. Push se ahead; `gh pr edit --body-file /tmp/nexus-pr-body.md`
+9. Push se ahead; `gh pr edit --body-file /tmp/pr-body.md`
 10. Título: mudar só se escopo mudou claramente; **Evidências nunca muda**
 11. **Retornar link da PR** na resposta (`gh pr view --json url -q .url`); incluir `<base>` ← branch atual; repetir aviso uncommitted se aplicável
 
@@ -156,18 +156,18 @@ cat /tmp/nexus-pr-body-new.md | bash .cursor/skills/pull-request/scripts/merge-e
 
 Seguir [template.md](template.md). Heurísticas para **Tipo da alteração** (`- [x]` só nos aplicáveis):
 
-| Sinal no diff/contexto | Tipo |
-|------------------------|------|
-| `*.test.js` novos/alterados | Testes |
-| `.github/`, workflows CI | CI/CD |
-| `package.json`, lockfile | Dependências |
-| `.md`, docs | Documentação |
-| só CSS/HTML visual | Estilo / UI |
-| contrato/API pública quebrada | Breaking change |
-| reorganização sem mudança de comportamento | Refatoração |
-| comportamento incorreto corrigido | Correção de bug |
-| comportamento novo para o usuário | Nova funcionalidade |
-| nenhum claro | Outro (+ mencionar na Descrição) |
+| Sinal no diff/contexto                     | Tipo                             |
+| ------------------------------------------ | -------------------------------- |
+| `*.test.js` novos/alterados                | Testes                           |
+| `.github/`, workflows CI                   | CI/CD                            |
+| `package.json`, lockfile                   | Dependências                     |
+| `.md`, docs                                | Documentação                     |
+| só CSS/HTML visual                         | Estilo / UI                      |
+| contrato/API pública quebrada              | Breaking change                  |
+| reorganização sem mudança de comportamento | Refatoração                      |
+| comportamento incorreto corrigido          | Correção de bug                  |
+| comportamento novo para o usuário          | Nova funcionalidade              |
+| nenhum claro                               | Outro (+ mencionar na Descrição) |
 
 - **Descrição**: 2–4 frases; priorizar chat; complementar com commits
 - **O que foi feito**: bullets concretos; sem dump de diff

@@ -49,7 +49,7 @@ No update, se o autor alterou Evidências (ex.: link de captura), o script `merg
 **Crie a PR** — com uncommitted:
 
 ```markdown
-PR criada: https://github.com/org/nexus/pull/42
+PR criada: https://github.com/org/repo/pull/42
 
 **Aviso:** há alterações locais não comitadas (`features/auth/login-form.js`) que não entraram nesta PR. Faça commit e envie **"Atualize a PR"** para incluir.
 ```
@@ -57,7 +57,7 @@ PR criada: https://github.com/org/nexus/pull/42
 **Atualize a PR:**
 
 ```markdown
-PR atualizada: https://github.com/org/nexus/pull/42
+PR atualizada: https://github.com/org/repo/pull/42
 ```
 
 O link deve ser a URL completa `https://github.com/...` — não apenas o número da PR.
