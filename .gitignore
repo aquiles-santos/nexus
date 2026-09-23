@@ -15,3 +15,8 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# Internal docs (local only)
+docs/foundation.md
+docs/roadmap.md
+docs/architecture/
