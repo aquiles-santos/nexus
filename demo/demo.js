@@ -1,11 +1,4 @@
-import '/src/editor/nexus-editor.js';
-import { DEFAULT_TOOLBAR } from '/src/editor/editor-config.js';
-import { pluginBasicFormats } from '/src/plugins/basic-formats/index.js';
-import { pluginLists } from '/src/plugins/lists/index.js';
-import { pluginLink } from '/src/plugins/link/index.js';
-import { pluginMedia } from '/src/plugins/media/index.js';
-import { pluginPasteClean } from '/src/plugins/paste-clean/index.js';
-import { pluginSourceCode } from '/src/plugins/source-code/index.js';
+import { DEFAULT_TOOLBAR, configureNexusEditor } from '/src/nexus.js';
 
 const SAMPLE_HTML = `
 <h1>The Architecture of Modern Content Systems</h1>
@@ -45,7 +38,8 @@ export function initDemo(root) {
 
   let saveTimer = null;
 
-  editor.configure({
+  configureNexusEditor(editor, {
+    plugins: 'basic-formats lists link media paste-clean source-code',
     toolbar: [
       ...DEFAULT_TOOLBAR,
       '|',
@@ -58,12 +52,6 @@ export function initDemo(root) {
       'toggleSource',
     ],
   });
-  editor.use(pluginBasicFormats);
-  editor.use(pluginLists);
-  editor.use(pluginLink);
-  editor.use(pluginMedia);
-  editor.use(pluginPasteClean);
-  editor.use(pluginSourceCode);
   editor.setContent(SAMPLE_HTML);
   updateCounts();
   setView('visual');

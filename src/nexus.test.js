@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createNexusEditor } from './nexus.js'
+import { createNexusEditor, configureNexusEditor } from './nexus.js'
 import { pluginLists } from './plugins/lists/index.js'
 
 describe('createNexusEditor (catalog factory)', () => {
@@ -53,5 +53,15 @@ describe('createNexusEditor (catalog factory)', () => {
     expect(() => createNexusEditor({ plugins: 'not-a-plugin' })).toThrow(
       'Unknown plugin "not-a-plugin"',
     )
+  })
+
+  it('resolves catalog names on configure for a custom element already in the page', () => {
+    const editor = document.createElement('nexus-editor')
+    document.body.appendChild(editor)
+
+    configureNexusEditor(editor, { plugins: 'basic-formats' })
+
+    expect(editor.config.plugins).toEqual(['basic-formats'])
+    expect(editor.toolbar.shadowRoot.querySelector('[data-command="bold"]')).not.toBeNull()
   })
 })

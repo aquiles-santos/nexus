@@ -12,12 +12,21 @@ test('integration demo mounts a configured editor', async ({ page }) => {
 
   const metrics = await editor.evaluate((element) => ({
     height: element.config.height,
+    plugins: element.config.plugins,
     toolbar: element.config.toolbar,
     offset: Math.round(element.getBoundingClientRect().height),
   }))
 
-  expect(metrics.height).toBe('400px')
-  expect(metrics.offset).toBe(400)
+  expect(metrics.height).toBe('600px')
+  expect(metrics.offset).toBe(600)
+  expect(metrics.plugins).toEqual([
+    'basic-formats',
+    'lists',
+    'link',
+    'media',
+    'paste-clean',
+    'source-code',
+  ])
   expect(metrics.toolbar).toEqual([
     'undo',
     'redo',
@@ -26,6 +35,7 @@ test('integration demo mounts a configured editor', async ({ page }) => {
     '|',
     'bold',
     'italic',
+    'underline',
     '|',
     'insertUnorderedList',
     'insertOrderedList',
@@ -38,7 +48,7 @@ test('integration demo mounts a configured editor', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'Negrito' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Itálico' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Sublinhado' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Sublinhado' })).toBeVisible()
 })
 
 test('integration demo applies bold from the host-configured toolbar', async ({ page }) => {
@@ -157,7 +167,7 @@ test('tall images stay within the writing area while the editor scrolls', async 
     }
   })
 
-  expect(metrics.editorHeight).toBe(400)
+  expect(metrics.editorHeight).toBe(600)
   expect(metrics.imageWidth).toBeLessThanOrEqual(metrics.contentWidth + 1)
   expect(metrics.imageBottom).toBeLessThanOrEqual(metrics.contentBottom + 1)
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)

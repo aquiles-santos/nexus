@@ -9,7 +9,14 @@ import {
 import { resolvePlugins } from './plugins/catalog.js';
 
 /**
- * @param {import('./editor/nexus-editor.js').NexusEditorElement} element
+ * @typedef {import('./editor/nexus-editor.js').NexusEditorElement} NexusEditorElement
+ */
+
+/** @type {WeakSet<NexusEditorElement>} */
+const catalogBound = new WeakSet();
+
+/**
+ * @param {NexusEditorElement} element
  * @param {import('./editor/editor-config.js').NexusEditorConfigInput['plugins']} pluginsInput
  */
 function applyInitPlugins(element, pluginsInput) {
@@ -23,21 +30,43 @@ function applyInitPlugins(element, pluginsInput) {
 }
 
 /**
- * High-level factory: resolves `init.plugins` names via the catalog and calls `use()`.
- * The custom element in `nexus-editor.js` stays free of plugin imports.
- *
- * @param {import('./editor/editor-config.js').NexusEditorConfigInput} [config]
- * @returns {{ element: import('./editor/nexus-editor.js').NexusEditorElement, destroy: () => void }}
+ * @param {NexusEditorElement} element
  */
-export function createNexusEditor(config) {
-  const { element, destroy } = createNexusEditorElement(config);
-  applyInitPlugins(element, config?.plugins);
+function bindCatalogConfigure(element) {
+  if (catalogBound.has(element)) {
+    return;
+  }
 
   const originalConfigure = element.configure.bind(element);
   element.configure = (input = {}) => {
     originalConfigure(input);
     applyInitPlugins(element, input.plugins);
   };
+  catalogBound.add(element);
+}
+
+/**
+ * Applies `init` (including catalog plugin names) to a `<nexus-editor>` already in the page.
+ *
+ * @param {NexusEditorElement} element
+ * @param {import('./editor/editor-config.js').NexusEditorConfigInput} [input]
+ */
+export function configureNexusEditor(element, input = {}) {
+  bindCatalogConfigure(element);
+  element.configure(input);
+}
+
+/**
+ * High-level factory: resolves `init.plugins` names via the catalog and calls `use()`.
+ * The custom element in `nexus-editor.js` stays free of plugin imports.
+ *
+ * @param {import('./editor/editor-config.js').NexusEditorConfigInput} [config]
+ * @returns {{ element: NexusEditorElement, destroy: () => void }}
+ */
+export function createNexusEditor(config) {
+  const { element, destroy } = createNexusEditorElement(config);
+  bindCatalogConfigure(element);
+  applyInitPlugins(element, config?.plugins);
 
   return { element, destroy };
 }
