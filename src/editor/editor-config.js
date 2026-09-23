@@ -30,10 +30,15 @@ const HEIGHT_PATTERN =
 const ZERO_LENGTH_PATTERN = /^(?:0(?:\.0+)?(?:px|em|rem|vh|vw|vmin|vmax|%)?)$/i;
 
 /**
+ * @typedef {import('../shared/plugin-registry.js').NexusPlugin} NexusPlugin
+ */
+
+/**
  * @typedef {Object} NexusEditorConfigInput
  * @property {number | string} [height]
  * @property {string | string[]} [toolbar]
  * @property {string | false | null} [placeholder]
+ * @property {string | Array<string | NexusPlugin>} [plugins]
  */
 
 /**
@@ -41,6 +46,7 @@ const ZERO_LENGTH_PATTERN = /^(?:0(?:\.0+)?(?:px|em|rem|vh|vw|vmin|vmax|%)?)$/i;
  * @property {string} height
  * @property {string[]} toolbar
  * @property {string | null} placeholder
+ * @property {string[]} plugins
  */
 
 /**
@@ -52,6 +58,7 @@ export function resolveEditorConfig(input = {}) {
     height: normalizeHeight(input.height),
     toolbar: normalizeToolbar(input.toolbar),
     placeholder: normalizePlaceholder(input.placeholder),
+    plugins: normalizePlugins(input.plugins),
   };
 }
 
@@ -131,4 +138,69 @@ export function normalizePlaceholder(value) {
 
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+/**
+ * Stores catalog names only; plugin objects in a mixed array are ignored here.
+ * Omitted, empty string, empty array, or invalid types mean no built-in plugins.
+ *
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+export function normalizePlugins(value) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  if (typeof value === 'string') {
+    if (value.trim() === '') {
+      return [];
+    }
+    return uniquePluginNames(value.trim().split(/\s+/));
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const names = value
+    .filter((item) => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return uniquePluginNames(names);
+}
+
+/**
+ * Additive merge used by `configure({ plugins })`. Undefined incoming keeps current names.
+ *
+ * @param {string[]} current
+ * @param {unknown} incoming
+ * @returns {string[]}
+ */
+export function mergePluginNames(current, incoming) {
+  if (incoming === undefined) {
+    return [...current];
+  }
+
+  return uniquePluginNames([...current, ...normalizePlugins(incoming)]);
+}
+
+/**
+ * @param {string[]} names
+ * @returns {string[]}
+ */
+function uniquePluginNames(names) {
+  const seen = new Set();
+  const unique = [];
+
+  for (const name of names) {
+    if (seen.has(name)) {
+      continue;
+    }
+    seen.add(name);
+    unique.push(name);
+  }
+
+  return unique;
 }
